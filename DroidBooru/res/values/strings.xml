@@ -1,3 +1,6 @@
 <resources>
     <string name="app_name">DroidBooru</string>
+    <string name="connect">Connect</string>
+    <string name="previous">&lt;</string>
+    <string name="next">&gt;</string>
 </resources>
