@@ -1,0 +1,6 @@
+[submodule "nodebooru"]
+	path = nodebooru
+	url = git@github.com:Uncodin/nodebooru.git
+[submodule "nativ"]
+	path = nativ
+	url = git@github.com:Uncodin/nativ.git

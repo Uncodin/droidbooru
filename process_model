@@ -1,0 +1,11 @@
+#!/bin/bash
+
+MODEL=./nodebooru/obooru.model
+OUTPUT_DIR=./DroidBooru/libs/
+
+mkdir -p ./build && \
+mkdir -p $OUTPUT_DIR && \
+cpp -P $MODEL ./build/out.model && \
+python nativ generate jni ./build/out.model && \
+cp ./build/jni/out.model/nativ.jar $OUTPUT_DIR && \
+cp -r ./build/jni/out.model/libs/* $OUTPUT_DIR
