@@ -177,6 +177,7 @@ public class MainActivity extends Activity {
             else if (extension.equals("gif")) {
                 // Just display the GIF
                 thumbUrl = url;
+                mimeType = "text/html"; // GIFs are best viewed in a browser
             }
             else {
                 thumbUrl = "http://img.uncod.in/thumb/" + image.getFilehash() + "_thumb.jpg";
