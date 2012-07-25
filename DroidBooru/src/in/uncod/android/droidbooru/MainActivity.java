@@ -132,10 +132,42 @@ public class MainActivity extends Activity {
     private void displayImage(int index) {
         Image image = mImages.get(index);
 
+        String mimeType = image.getMime();
+
         String extension = MimeTypeMap.getSingleton().getExtensionFromMimeType(image.getMime());
+        if (extension == null) {
+            extension = "undefined";
+        }
 
         String url = "http://img.uncod.in/img/" + image.getFilehash() + "." + extension;
 
-        mImageView.loadUrl(url);
+        if (mimeType.contains("audio") || mimeType.contains("video")) {
+            String thumbUrl;
+            if (mimeType.contains("audio")) {
+                thumbUrl = "http://img.uncod.in/thumb/music.png";
+            }
+            else {
+                thumbUrl = "http://img.uncod.in/thumb/music.png";
+            }
+
+            // Display thumb
+            mImageView.loadUrl(thumbUrl);
+        }
+        else {
+            String thumbUrl;
+
+            if (extension.equals("undefined")) {
+                thumbUrl = "http://img.uncod.in/thumb/temp_thumb.jpg";
+            }
+            else if (extension.equals("gif")) {
+                // Just display the GIF
+                thumbUrl = url;
+            }
+            else {
+                thumbUrl = "http://img.uncod.in/thumb/" + image.getFilehash() + "_thumb.jpg";
+            }
+
+            mImageView.loadUrl(thumbUrl);
+        }
     }
 }
