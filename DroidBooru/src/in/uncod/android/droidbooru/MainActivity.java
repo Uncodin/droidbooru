@@ -15,6 +15,7 @@ import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.webkit.MimeTypeMap;
@@ -74,6 +75,8 @@ public class MainActivity extends Activity {
         }
     }
 
+    private static final String TAG = "DroidBooru.MainActivity";
+
     private List<Image> mImages = null;
     private ORMDatastore mDatastore;
     private View mConnectButton;
@@ -91,6 +94,7 @@ public class MainActivity extends Activity {
         setContentView(R.layout.activity_main);
 
         mDataDirectory = getExternalFilesDir(null);
+        Log.d(TAG, "Using data directory: " + mDataDirectory.getAbsolutePath());
 
         mControls = findViewById(R.id.controls);
 
