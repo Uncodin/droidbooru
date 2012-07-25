@@ -61,8 +61,8 @@ public class MainActivity extends Activity {
                                 else {
                                     runOnUiThread(new Runnable() {
                                         public void run() {
-                                            Toast.makeText(MainActivity.this, "No images",
-                                                    Toast.LENGTH_LONG).show();
+                                            Toast.makeText(MainActivity.this, "No images", Toast.LENGTH_LONG)
+                                                    .show();
                                         }
                                     });
                                 }
@@ -86,7 +86,7 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        mDataDirectory = getFilesDir();
+        mDataDirectory = getExternalFilesDir(null);
 
         mControls = findViewById(R.id.controls);
 
