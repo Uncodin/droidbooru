@@ -12,6 +12,8 @@ import java.util.Arrays;
 import java.util.List;
 
 import android.app.Activity;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
 import android.view.View.OnClickListener;
@@ -81,6 +83,8 @@ public class MainActivity extends Activity {
     private int mImageIndex = 0;
     private View mControls;
     private View mPreviousButton;
+    private View mLaunchButton;
+    private Intent mLaunchIntent;
 
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -126,7 +130,17 @@ public class MainActivity extends Activity {
             }
         });
 
+        mLaunchButton = findViewById(R.id.button_launch);
+        mLaunchButton.setOnClickListener(new OnClickListener() {
+            public void onClick(View v) {
+                startActivity(mLaunchIntent);
+            }
+        });
+
         mImageView = (WebView) findViewById(R.id.image);
+
+        mLaunchIntent = new Intent();
+        mLaunchIntent.setAction(android.content.Intent.ACTION_VIEW);
     }
 
     private void displayImage(int index) {
@@ -137,6 +151,7 @@ public class MainActivity extends Activity {
         String extension = MimeTypeMap.getSingleton().getExtensionFromMimeType(image.getMime());
         if (extension == null) {
             extension = "undefined";
+            mimeType = "text/html"; // Let the user open/download the file through a browser
         }
 
         String url = "http://img.uncod.in/img/" + image.getFilehash() + "." + extension;
@@ -169,5 +184,7 @@ public class MainActivity extends Activity {
 
             mImageView.loadUrl(thumbUrl);
         }
+
+        mLaunchIntent.setDataAndType(Uri.parse(url), mimeType);
     }
 }
