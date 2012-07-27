@@ -4,4 +4,6 @@
     <string name="previous">&lt;</string>
     <string name="next">&gt;</string>
     <string name="launch">Embiggen</string>
+    <string name="downloading">Downloading&#8230;</string>
+    <string name="processing">Processing&#8230;</string>
 </resources>
