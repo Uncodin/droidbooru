@@ -4,3 +4,6 @@
 [submodule "nativ"]
 	path = nativ
 	url = git@github.com:Uncodin/nativ.git
+[submodule "ActionBarSherlock"]
+	path = ActionBarSherlock
+	url = git://github.com/JakeWharton/ActionBarSherlock.git

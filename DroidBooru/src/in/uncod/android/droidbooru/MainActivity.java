@@ -1,5 +1,6 @@
 package in.uncod.android.droidbooru;
 
+import com.actionbarsherlock.app.SherlockActivity;
 import in.uncod.nativ.AbstractNetworkCallbacks;
 import in.uncod.nativ.HttpClientNetwork;
 import in.uncod.nativ.INetworkHandler;
@@ -11,7 +12,6 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.List;
 
-import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
@@ -22,7 +22,7 @@ import android.webkit.MimeTypeMap;
 import android.webkit.WebView;
 import android.widget.Toast;
 
-public class MainActivity extends Activity {
+public class MainActivity extends SherlockActivity {
     private final class AuthCallback extends AbstractNetworkCallbacks {
         private boolean mError;
 
