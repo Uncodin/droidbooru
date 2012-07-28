@@ -123,11 +123,13 @@ public class DownloadFilesTask extends TaskWithProgressAndListener<URL, Integer,
                 }
 
                 results.add(destinationFile);
-                currentFileIndex++;
             }
             catch (Exception e) {
                 // TODO Remember data about failures and report them to listener
                 e.printStackTrace();
+            }
+            finally {
+                currentFileIndex++;
             }
         }
 
