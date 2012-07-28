@@ -13,12 +13,12 @@ import java.util.List;
 import android.app.ProgressDialog;
 import android.util.Log;
 
-class CreateStaticsForFilesTask extends TaskWithProgressAndListener<File, Integer, List<Static>> {
+public class CreateStaticsForFilesTask extends TaskWithProgressAndListener<File, Integer, List<Static>> {
     private static final String TAG = "CreateStaticsForImagesTask";
 
     private ORMDatastore mDatastore;
 
-    CreateStaticsForFilesTask(ORMDatastore datastore, OnResultListener<List<Static>> listener,
+    public CreateStaticsForFilesTask(ORMDatastore datastore, OnResultListener<List<Static>> listener,
             ProgressDialog dialog) {
         super(listener, dialog);
 

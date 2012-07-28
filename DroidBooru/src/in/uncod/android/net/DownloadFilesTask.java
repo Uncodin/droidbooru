@@ -15,12 +15,30 @@ import java.util.List;
 import android.app.ProgressDialog;
 import android.util.Log;
 
+/**
+ * A task for downloading multiple files, that accepts an optional results callback and progress dialog.
+ */
 public class DownloadFilesTask extends TaskWithProgressAndListener<URL, Integer, List<File>> {
     private static final String TAG = "DownloadFilesTask";
 
     private File mDestinationPath;
     private boolean mOverwriteExisting;
 
+    /**
+     * Creates a file download task.
+     * 
+     * @param destinationPath
+     *            The destination directory. All files will be downloaded here. Must be an existing directory.
+     * @param overwriteExisting
+     *            If true, any files with the same name as those being downloaded will be overwritten. Otherwise, the
+     *            existing file will be returned with the rest of the download results.
+     * @param listener
+     *            If not null, the result listener will be activated with the list of downloaded files.
+     * @param dialog
+     *            If not null, the progress dialog will be shown and dismissed automatically, and will have its values
+     *            updated as files are downloaded. Any special settings such as cancellation, style, etc. should be set
+     *            on the dialog before the task is executed.
+     */
     public DownloadFilesTask(File destinationPath, boolean overwriteExisting,
             OnResultListener<List<File>> listener, ProgressDialog dialog) {
         super(listener, dialog);
@@ -41,7 +59,10 @@ public class DownloadFilesTask extends TaskWithProgressAndListener<URL, Integer,
             int numberOfFiles = values[1];
             int currentDownloadPercent = values[2];
 
+            // Total progress is 100% multiplied by the number of files
             mDialog.setMax(100 * numberOfFiles);
+
+            // Current progress is 100% for each previous file, added to the percentage for the current download
             mDialog.setProgress((currentFileIndex * 100) + currentDownloadPercent);
         }
     }
