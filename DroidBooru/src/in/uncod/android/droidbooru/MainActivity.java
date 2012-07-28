@@ -12,13 +12,20 @@ import in.uncod.nativ.ORMDownloadParameters;
 import in.uncod.nativ.Static;
 
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 
 import android.app.ProgressDialog;
 import android.content.ActivityNotFoundException;
+import android.content.ContentResolver;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
@@ -44,7 +51,7 @@ public class MainActivity extends SherlockActivity {
 
         @Override
         public void finished(final String extras) {
-            downloadImages(5, new Runnable() {
+            downloadFiles(5, 0, new Runnable() {
                 public void run() {
                     if (mBooruStatics.size() > 0) {
                         mConnectButton.setVisibility(View.GONE);
@@ -63,6 +70,11 @@ public class MainActivity extends SherlockActivity {
 
     private static final String TAG = "MainActivity";
 
+    /**
+     * Request code for uploading a file
+     */
+    private static final int REQ_CODE_UPLOAD_FILE = 0;
+
     private List<Static> mBooruStatics = new ArrayList<Static>();
     private ORMDatastore mDatastore;
     private View mConnectButton;
@@ -74,6 +86,8 @@ public class MainActivity extends SherlockActivity {
     private View mPreviousButton;
     private View mLaunchButton;
     private Intent mLaunchIntent;
+
+    private View mUploadButton;
 
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -118,7 +132,7 @@ public class MainActivity extends SherlockActivity {
                 mImageIndex++;
 
                 if (mImageIndex == mBooruStatics.size()) {
-                    downloadImages(5, new Runnable() {
+                    downloadFiles(5, mBooruStatics.size(), new Runnable() {
                         public void run() {
                             displayImage(mImageIndex);
                             mNextButton.setEnabled(true);
@@ -151,6 +165,95 @@ public class MainActivity extends SherlockActivity {
 
         mLaunchIntent = new Intent();
         mLaunchIntent.setAction(android.content.Intent.ACTION_VIEW);
+
+        mUploadButton = findViewById(R.id.button_upload);
+        mUploadButton.setOnClickListener(new OnClickListener() {
+            public void onClick(View v) {
+                showFileChooser();
+            }
+        });
+    }
+
+    private void showFileChooser() {
+        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+        intent.setType("*/*");
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+
+        startActivityForResult(intent, REQ_CODE_UPLOAD_FILE);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        switch (requestCode) {
+        case REQ_CODE_UPLOAD_FILE:
+            if (resultCode == RESULT_OK) {
+                // Upload chosen file
+                Uri uri = data.getData();
+                Log.d(TAG, "Upload request for " + uri);
+
+                File uploadFile = null;
+                final File tempFile;
+
+                if (uri.getScheme().equals(ContentResolver.SCHEME_CONTENT)) {
+                    File copyFile = null;
+
+                    try {
+                        copyFile = File.createTempFile("upload_", ".tmp", mDataDirectory);
+
+                        InputStream inStream = getContentResolver().openInputStream(uri);
+                        FileOutputStream outStream = new FileOutputStream(copyFile);
+
+                        byte[] buffer = new byte[1024];
+                        while (inStream.read(buffer) != -1) {
+                            outStream.write(buffer);
+                        }
+
+                        inStream.close();
+                        outStream.close();
+
+                        uploadFile = copyFile;
+
+                    }
+                    catch (IOException e) {
+                        // TODO Auto-generated catch block
+                        e.printStackTrace();
+                    }
+                    finally {
+                        tempFile = copyFile;
+                    }
+                }
+                else {
+                    uploadFile = new File(uri.getPath());
+                    tempFile = null;
+                }
+
+                if (uploadFile != null) {
+                    String email = "droidbooru@ironclad.mobi";
+                    String tags = "droidbooru-android,"
+                            + new SimpleDateFormat("MM-dd-yy").format(Calendar.getInstance().getTime());
+
+                    new BooruUploadTask(URI.create("http://img.uncod.in/upload/curl"), email, tags,
+                            new OnResultListener<Void>() {
+                                public void onTaskResult(Void result) {
+                                    if (tempFile != null) {
+                                        tempFile.delete();
+                                    }
+
+                                    // Download and display the image that was just uploaded
+                                    downloadFiles(1, 0, new Runnable() {
+                                        public void run() {
+                                            mImageIndex = 0;
+                                            displayImage(mImageIndex);
+                                        }
+                                    });
+                                }
+                            }, null).execute(uploadFile);
+                }
+            }
+            break;
+        default:
+            super.onActivityResult(requestCode, resultCode, data);
+        }
     }
 
     private List<URL> getThumbUrlsForFiles(Image[] files) {
@@ -187,7 +290,7 @@ public class MainActivity extends SherlockActivity {
                     thumbUrl = "http://img.uncod.in/thumb/music.png";
                 }
                 else {
-                    thumbUrl = "http://img.uncod.in/thumb/music.png";
+                    thumbUrl = "http://img.uncod.in/thumb/video.png";
                 }
 
                 result = new URL(thumbUrl);
@@ -255,15 +358,25 @@ public class MainActivity extends SherlockActivity {
         mLaunchIntent.setDataAndType(Uri.parse(url.toString()), image.getMime());
     }
 
-    private void downloadImages(int number, final Runnable runAfterDownload) {
+    /**
+     * Queries the nodebooru service for files, ordered by uploaded date, descending
+     * 
+     * @param number
+     *            The number of files to retrieve
+     * @param offset
+     *            The number of files to skip
+     * @param runAfterDownload
+     *            If not null, this Runnable will be activated after the download completes
+     */
+    private void downloadFiles(int number, final int offset, final Runnable runAfterDownload) {
         mDatastore.externalQueryImage(
-                KeyPredicate.defaultPredicate().orderBy("uploadedDate", true).limit(number)
-                        .offset(mBooruStatics.size()), null, new AbstractNetworkCallbacks() {
+                KeyPredicate.defaultPredicate().orderBy("uploadedDate", true).limit(number).offset(offset),
+                null, new AbstractNetworkCallbacks() {
                     @Override
                     public void onReceivedImage(ORMDatastore ds, String queryName, final Image[] images) {
                         if (images.length > 0) {
                             // Convert list of URLs to array
-                            final URL[] urls = getThumbUrlsForFiles(images).toArray(new URL[0]);
+                            final URL[] urls = getThumbUrlsForFiles(images).toArray(new URL[images.length]);
 
                             runOnUiThread(new Runnable() {
                                 public void run() {
@@ -281,7 +394,19 @@ public class MainActivity extends SherlockActivity {
                                                     new CreateStaticsForFilesTask(mDatastore,
                                                             new OnResultListener<List<Static>>() {
                                                                 public void onTaskResult(List<Static> files) {
-                                                                    mBooruStatics.addAll(files);
+                                                                    // Make sure the files appear in order
+                                                                    if (offset >= mBooruStatics.size()) {
+                                                                        // Add the files to the end of the list
+                                                                        mBooruStatics.addAll(files);
+                                                                    }
+                                                                    else {
+                                                                        // Insert the files at their offset
+                                                                        int i = offset;
+                                                                        for (Static file : files) {
+                                                                            mBooruStatics.add(i, file);
+                                                                            i++;
+                                                                        }
+                                                                    }
 
                                                                     if (runAfterDownload != null) {
                                                                         runAfterDownload.run();

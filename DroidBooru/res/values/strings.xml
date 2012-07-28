@@ -6,4 +6,5 @@
     <string name="launch">Embiggen</string>
     <string name="downloading">Downloading&#8230;</string>
     <string name="processing">Processing&#8230;</string>
+    <string name="upload">Upload</string>
 </resources>
