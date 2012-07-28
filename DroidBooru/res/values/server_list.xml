@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string-array name="server_list">
+        <item>Uncodin</item>
+    </string-array>
+    <string-array name="server_list_values">
+        <item>img.uncod.in</item>
+    </string-array>
+
+</resources>

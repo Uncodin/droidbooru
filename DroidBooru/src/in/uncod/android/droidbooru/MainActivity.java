@@ -27,9 +27,11 @@ import android.app.ProgressDialog;
 import android.content.ActivityNotFoundException;
 import android.content.ContentResolver;
 import android.content.Intent;
+import android.content.res.Resources;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.webkit.MimeTypeMap;
@@ -37,6 +39,8 @@ import android.webkit.WebView;
 import android.widget.Toast;
 
 import com.actionbarsherlock.app.SherlockActivity;
+import com.actionbarsherlock.view.Menu;
+import com.actionbarsherlock.view.MenuItem.OnMenuItemClickListener;
 
 public class MainActivity extends SherlockActivity {
     private final class AuthCallback extends AbstractNetworkCallbacks {
@@ -86,8 +90,27 @@ public class MainActivity extends SherlockActivity {
     private View mPreviousButton;
     private View mLaunchButton;
     private Intent mLaunchIntent;
-
     private View mUploadButton;
+    private URI mServerAddress;
+    private URI mServerNativApiUrl;
+    private URI mServerFilePostUrl;
+    private URI mServerFileRequestUrl;
+    private URI mServerThumbRequestUrl;
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Login settings
+        menu.add(R.string.settings).setShowAsActionFlags(MenuItem.SHOW_AS_ACTION_NEVER)
+                .setOnMenuItemClickListener(new OnMenuItemClickListener() {
+                    public boolean onMenuItemClick(com.actionbarsherlock.view.MenuItem item) {
+                        startActivity(new Intent(MainActivity.this, LoginSettingsActivity.class));
+
+                        return false;
+                    }
+                });
+
+        return super.onCreateOptionsMenu(menu);
+    }
 
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -100,12 +123,13 @@ public class MainActivity extends SherlockActivity {
 
         mConnectButton = findViewById(R.id.button_connect);
         mConnectButton.setOnClickListener(new OnClickListener() {
+
             public void onClick(View v) {
                 mConnectButton.setEnabled(false);
 
                 mDatastore = ORMDatastore.create(new File(mDataDirectory, "droidbooru.db").getAbsolutePath());
                 mDatastore.setDownloadPathPrefix(mDataDirectory.getAbsolutePath() + File.separator);
-                mDatastore.setNetworkHandler(new HttpClientNetwork("http://img.uncod.in/v2/api"));
+                mDatastore.setNetworkHandler(new HttpClientNetwork(mServerNativApiUrl.toString()));
                 mDatastore.authenticate("test", "test", new AuthCallback());
             }
         });
@@ -172,6 +196,19 @@ public class MainActivity extends SherlockActivity {
                 showFileChooser();
             }
         });
+
+        Resources resources = getResources();
+
+        // Get server address
+        mServerAddress = URI.create("http://"
+                + getPreferences(MODE_PRIVATE).getString(resources.getString(R.string.pref_selected_server),
+                        resources.getString(R.string.dv_pref_selected_server)));
+
+        // Setup various endpoints
+        mServerNativApiUrl = URI.create(mServerAddress + "/v2/api");
+        mServerFilePostUrl = URI.create(mServerAddress + "/upload/curl");
+        mServerFileRequestUrl = URI.create(mServerAddress + "/img/");
+        mServerThumbRequestUrl = URI.create(mServerAddress + "/thumb/");
     }
 
     private void showFileChooser() {
@@ -232,22 +269,21 @@ public class MainActivity extends SherlockActivity {
                     String tags = "droidbooru-android,"
                             + new SimpleDateFormat("MM-dd-yy").format(Calendar.getInstance().getTime());
 
-                    new BooruUploadTask(URI.create("http://img.uncod.in/upload/curl"), email, tags,
-                            new OnResultListener<Void>() {
-                                public void onTaskResult(Void result) {
-                                    if (tempFile != null) {
-                                        tempFile.delete();
-                                    }
+                    new BooruUploadTask(mServerFilePostUrl, email, tags, new OnResultListener<Void>() {
+                        public void onTaskResult(Void result) {
+                            if (tempFile != null) {
+                                tempFile.delete();
+                            }
 
-                                    // Download and display the image that was just uploaded
-                                    downloadFiles(1, 0, new Runnable() {
-                                        public void run() {
-                                            mImageIndex = 0;
-                                            displayImage(mImageIndex);
-                                        }
-                                    });
+                            // Download and display the image that was just uploaded
+                            downloadFiles(1, 0, new Runnable() {
+                                public void run() {
+                                    mImageIndex = 0;
+                                    displayImage(mImageIndex);
                                 }
-                            }, null).execute(uploadFile);
+                            });
+                        }
+                    }, null).execute(uploadFile);
                 }
             }
             break;
@@ -270,7 +306,7 @@ public class MainActivity extends SherlockActivity {
         String extension = getFileExtension(file);
 
         try {
-            return new URL("http://img.uncod.in/img/" + file.getFilehash() + "." + extension);
+            return new URL(mServerFileRequestUrl + file.getFilehash() + "." + extension);
         }
         catch (MalformedURLException e) {
             return null;
@@ -287,10 +323,10 @@ public class MainActivity extends SherlockActivity {
             if (mimeType.contains("audio") || mimeType.contains("video")) {
                 String thumbUrl;
                 if (mimeType.contains("audio")) {
-                    thumbUrl = "http://img.uncod.in/thumb/music.png";
+                    thumbUrl = mServerThumbRequestUrl + "music.png";
                 }
                 else {
-                    thumbUrl = "http://img.uncod.in/thumb/video.png";
+                    thumbUrl = mServerThumbRequestUrl + "video.png";
                 }
 
                 result = new URL(thumbUrl);
@@ -299,14 +335,14 @@ public class MainActivity extends SherlockActivity {
                 String thumbUrl;
 
                 if (extension.equals("undefined")) {
-                    thumbUrl = "http://img.uncod.in/thumb/temp_thumb.jpg";
+                    thumbUrl = mServerThumbRequestUrl + "temp_thumb.jpg";
                 }
                 else if (extension.equals("gif")) {
                     // GIFs don't have thumbs
-                    thumbUrl = "http://img.uncod.in/img/" + file.getFilehash() + "." + extension;
+                    thumbUrl = mServerFileRequestUrl + file.getFilehash() + "." + extension;
                 }
                 else {
-                    thumbUrl = "http://img.uncod.in/thumb/" + file.getFilehash() + "_thumb.jpg";
+                    thumbUrl = mServerThumbRequestUrl + file.getFilehash() + "_thumb.jpg";
                 }
 
                 result = new URL(thumbUrl);

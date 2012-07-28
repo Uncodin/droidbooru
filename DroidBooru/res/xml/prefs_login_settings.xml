@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
+
+    <PreferenceCategory android:title="@string/login_settings" >
+        <ListPreference
+            android:defaultValue="@string/dv_pref_selected_server"
+            android:entries="@array/server_list"
+            android:entryValues="@array/server_list_values"
+            android:key="@string/pref_selected_server"
+            android:title="@string/select_server" />
+    </PreferenceCategory>
+
+</PreferenceScreen>

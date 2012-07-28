@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="pref_selected_server">selected_server</string>
+    <string name="dv_pref_selected_server">img.uncod.in</string>
+
+</resources>
