@@ -25,13 +25,18 @@ import java.util.List;
 
 import org.apache.http.HttpHost;
 
+import android.accounts.Account;
+import android.accounts.AccountManager;
 import android.app.ProgressDialog;
 import android.content.ActivityNotFoundException;
 import android.content.ContentResolver;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.SharedPreferences.Editor;
 import android.content.res.Resources;
 import android.net.Uri;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
@@ -98,6 +103,9 @@ public class MainActivity extends SherlockActivity {
     private URI mServerFilePostUrl;
     private URI mServerFileRequestUrl;
     private URI mServerThumbRequestUrl;
+    private Account mAccount;
+
+    private SharedPreferences mPrefs;
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -120,10 +128,14 @@ public class MainActivity extends SherlockActivity {
 
         Resources resources = getResources();
 
+        mPrefs = PreferenceManager.getDefaultSharedPreferences(this);
+
+        getAndStoreAccount(resources);
+
         // Get server address
         mServerAddress = URI.create(HttpHost.DEFAULT_SCHEME_NAME
                 + "://"
-                + getPreferences(MODE_PRIVATE).getString(resources.getString(R.string.pref_selected_server),
+                + mPrefs.getString(resources.getString(R.string.pref_selected_server),
                         resources.getString(R.string.dv_pref_selected_server)));
 
         // Setup various endpoints
@@ -169,6 +181,50 @@ public class MainActivity extends SherlockActivity {
 
             uploadFiles(files);
         }
+    }
+
+    private void getAndStoreAccount(Resources resources) {
+        // Get stored account if we have one
+        String storedAccountName = mPrefs.getString(resources.getString(R.string.pref_account_name), "");
+        if (storedAccountName != "") {
+            mAccount = new Account(storedAccountName, mPrefs.getString(
+                    resources.getString(R.string.pref_account_type), ""));
+        }
+        else {
+            Account[] accounts = AccountManager.get(this).getAccounts();
+            if (accounts.length > 0) {
+                // TODO Let user pick account
+                for (Account account : accounts) {
+                    if (account.name.endsWith("ironclad.mobi")) {
+                        mAccount = account;
+                    }
+                }
+
+                if (mAccount == null)
+                    mAccount = createDefaultAccount();
+
+                storeAccountInPrefs(mAccount, resources);
+            }
+            else {
+                // Proceed with a default account
+                mAccount = createDefaultAccount();
+            }
+        }
+
+        Log.d(TAG, "Using account " + mAccount.name);
+    }
+
+    private void storeAccountInPrefs(Account account, Resources resources) {
+        Editor editor = mPrefs.edit();
+
+        editor.putString(resources.getString(R.string.pref_account_name), account.name);
+        editor.putString(resources.getString(R.string.pref_account_type), account.type);
+
+        editor.commit();
+    }
+
+    private Account createDefaultAccount() {
+        return new Account("droidbooru@ironclad.mobi", "Google");
     }
 
     private void initAndAuthNativ() {
@@ -319,7 +375,7 @@ public class MainActivity extends SherlockActivity {
     }
 
     private void uploadFiles(final File[] files) {
-        String email = "droidbooru@ironclad.mobi";
+        String email = mAccount.name;
         String tags = "droidbooru,"
                 + new SimpleDateFormat("MM-dd-yy").format(Calendar.getInstance().getTime());
 
