@@ -13,6 +13,7 @@ import org.apache.http.entity.mime.content.StringBody;
 import org.apache.http.impl.client.DefaultHttpClient;
 
 import android.app.ProgressDialog;
+import android.util.Log;
 
 /**
  * A task for uploading files to a nodebooru service.
@@ -20,6 +21,8 @@ import android.app.ProgressDialog;
  * Use the execute() method to start the upload in a background thread.
  */
 public class BooruUploadTask extends TaskWithProgressAndListener<File, Void, Void> {
+    private static final String TAG = "BooruUploadTask";
+
     private URI mApiUrl;
     private String mEmail;
     private String mTags;
@@ -57,8 +60,13 @@ public class BooruUploadTask extends TaskWithProgressAndListener<File, Void, Voi
         // Build the POST request
         MultipartEntity entity = new MultipartEntity();
 
+        int i = 0;
         for (File file : params) {
-            entity.addPart("files", new FileBody(file));
+            if (file != null && file.exists()) {
+                entity.addPart("file" + i, new FileBody(file));
+            }
+
+            i++;
         }
 
         try {
@@ -68,6 +76,7 @@ public class BooruUploadTask extends TaskWithProgressAndListener<File, Void, Voi
             post.setEntity(entity);
 
             // Send the request
+            Log.d(TAG, "Sending upload request...");
             client.execute(post);
         }
         catch (Exception e) {

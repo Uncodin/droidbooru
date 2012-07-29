@@ -23,6 +23,8 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 
+import org.apache.http.HttpHost;
+
 import android.app.ProgressDialog;
 import android.content.ActivityNotFoundException;
 import android.content.ContentResolver;
@@ -116,9 +118,67 @@ public class MainActivity extends SherlockActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        Resources resources = getResources();
+
+        // Get server address
+        mServerAddress = URI.create(HttpHost.DEFAULT_SCHEME_NAME
+                + "://"
+                + getPreferences(MODE_PRIVATE).getString(resources.getString(R.string.pref_selected_server),
+                        resources.getString(R.string.dv_pref_selected_server)));
+
+        // Setup various endpoints
+        mServerNativApiUrl = URI.create(mServerAddress + "/v2/api");
+        mServerFilePostUrl = URI.create(mServerAddress + "/upload/curl");
+        mServerFileRequestUrl = URI.create(mServerAddress + "/img/");
+        mServerThumbRequestUrl = URI.create(mServerAddress + "/thumb/");
+
+        // Set data directory
         mDataDirectory = getExternalFilesDir(null);
         Log.d(TAG, "Using data directory: " + mDataDirectory.getAbsolutePath());
 
+        initializeUI();
+
+        Intent intent = getIntent();
+        if (Intent.ACTION_SEND.equals(intent.getAction())) {
+            // Started via Share request
+            Log.d(TAG, "Received single file upload request");
+
+            // Prepare to refresh after upload
+            initAndAuthNativ();
+
+            // Uploading a single file
+            uploadFiles(new File[] { getFileForUri((Uri) intent.getParcelableExtra(Intent.EXTRA_STREAM)) });
+        }
+        else if (Intent.ACTION_SEND_MULTIPLE.equals(intent.getAction())) {
+            // Started via Share request
+            Log.d(TAG, "Received multiple file upload request");
+
+            // Prepare to refresh after upload
+            initAndAuthNativ();
+
+            // Uploading multiple files
+            ArrayList<Uri> fileUris = intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM);
+            File[] files = new File[fileUris.size()];
+
+            int i = 0;
+            for (Uri uri : fileUris) {
+                files[i] = getFileForUri(uri);
+
+                i++;
+            }
+
+            uploadFiles(files);
+        }
+    }
+
+    private void initAndAuthNativ() {
+        mDatastore = ORMDatastore.create(new File(mDataDirectory, "droidbooru.db").getAbsolutePath());
+        mDatastore.setDownloadPathPrefix(mDataDirectory.getAbsolutePath() + File.separator);
+        mDatastore.setNetworkHandler(new HttpClientNetwork(mServerNativApiUrl.toString()));
+        mDatastore.authenticate("test", "test", new AuthCallback());
+    }
+
+    private void initializeUI() {
         mControls = findViewById(R.id.controls);
 
         mConnectButton = findViewById(R.id.button_connect);
@@ -127,10 +187,7 @@ public class MainActivity extends SherlockActivity {
             public void onClick(View v) {
                 mConnectButton.setEnabled(false);
 
-                mDatastore = ORMDatastore.create(new File(mDataDirectory, "droidbooru.db").getAbsolutePath());
-                mDatastore.setDownloadPathPrefix(mDataDirectory.getAbsolutePath() + File.separator);
-                mDatastore.setNetworkHandler(new HttpClientNetwork(mServerNativApiUrl.toString()));
-                mDatastore.authenticate("test", "test", new AuthCallback());
+                initAndAuthNativ();
             }
         });
 
@@ -196,19 +253,6 @@ public class MainActivity extends SherlockActivity {
                 showFileChooser();
             }
         });
-
-        Resources resources = getResources();
-
-        // Get server address
-        mServerAddress = URI.create("http://"
-                + getPreferences(MODE_PRIVATE).getString(resources.getString(R.string.pref_selected_server),
-                        resources.getString(R.string.dv_pref_selected_server)));
-
-        // Setup various endpoints
-        mServerNativApiUrl = URI.create(mServerAddress + "/v2/api");
-        mServerFilePostUrl = URI.create(mServerAddress + "/upload/curl");
-        mServerFileRequestUrl = URI.create(mServerAddress + "/img/");
-        mServerThumbRequestUrl = URI.create(mServerAddress + "/thumb/");
     }
 
     private void showFileChooser() {
@@ -217,6 +261,40 @@ public class MainActivity extends SherlockActivity {
         intent.addCategory(Intent.CATEGORY_OPENABLE);
 
         startActivityForResult(intent, REQ_CODE_UPLOAD_FILE);
+    }
+
+    private File getFileForUri(Uri uri) {
+        File retFile = null;
+
+        if (uri.getScheme().equals(ContentResolver.SCHEME_CONTENT)) {
+            try {
+                // Copy the file to our cache
+                retFile = File.createTempFile("upload_", ".tmp", getExternalCacheDir());
+
+                InputStream inStream = getContentResolver().openInputStream(uri);
+                FileOutputStream outStream = new FileOutputStream(retFile);
+
+                byte[] buffer = new byte[1024];
+                while (inStream.read(buffer) != -1) {
+                    outStream.write(buffer);
+                }
+
+                inStream.close();
+                outStream.close();
+            }
+            catch (IOException e) {
+                e.printStackTrace();
+
+                // Delete the temp file and return null
+                retFile.delete();
+                retFile = null;
+            }
+        }
+        else if (uri.getScheme().equals(ContentResolver.SCHEME_FILE)) {
+            retFile = new File(uri.getPath());
+        }
+
+        return retFile;
     }
 
     @Override
@@ -228,68 +306,34 @@ public class MainActivity extends SherlockActivity {
                 Uri uri = data.getData();
                 Log.d(TAG, "Upload request for " + uri);
 
-                File uploadFile = null;
-                final File tempFile;
-
-                if (uri.getScheme().equals(ContentResolver.SCHEME_CONTENT)) {
-                    File copyFile = null;
-
-                    try {
-                        copyFile = File.createTempFile("upload_", ".tmp", mDataDirectory);
-
-                        InputStream inStream = getContentResolver().openInputStream(uri);
-                        FileOutputStream outStream = new FileOutputStream(copyFile);
-
-                        byte[] buffer = new byte[1024];
-                        while (inStream.read(buffer) != -1) {
-                            outStream.write(buffer);
-                        }
-
-                        inStream.close();
-                        outStream.close();
-
-                        uploadFile = copyFile;
-
-                    }
-                    catch (IOException e) {
-                        // TODO Auto-generated catch block
-                        e.printStackTrace();
-                    }
-                    finally {
-                        tempFile = copyFile;
-                    }
-                }
-                else {
-                    uploadFile = new File(uri.getPath());
-                    tempFile = null;
-                }
+                File uploadFile = getFileForUri(uri);
 
                 if (uploadFile != null) {
-                    String email = "droidbooru@ironclad.mobi";
-                    String tags = "droidbooru-android,"
-                            + new SimpleDateFormat("MM-dd-yy").format(Calendar.getInstance().getTime());
-
-                    new BooruUploadTask(mServerFilePostUrl, email, tags, new OnResultListener<Void>() {
-                        public void onTaskResult(Void result) {
-                            if (tempFile != null) {
-                                tempFile.delete();
-                            }
-
-                            // Download and display the image that was just uploaded
-                            downloadFiles(1, 0, new Runnable() {
-                                public void run() {
-                                    mImageIndex = 0;
-                                    displayImage(mImageIndex);
-                                }
-                            });
-                        }
-                    }, null).execute(uploadFile);
+                    uploadFiles(new File[] { uploadFile });
                 }
             }
             break;
         default:
             super.onActivityResult(requestCode, resultCode, data);
         }
+    }
+
+    private void uploadFiles(final File[] files) {
+        String email = "droidbooru@ironclad.mobi";
+        String tags = "droidbooru-android,"
+                + new SimpleDateFormat("MM-dd-yy").format(Calendar.getInstance().getTime());
+
+        new BooruUploadTask(mServerFilePostUrl, email, tags, new OnResultListener<Void>() {
+            public void onTaskResult(Void result) {
+                // Download and display the image(s) that were just uploaded
+                downloadFiles(files.length, 0, new Runnable() {
+                    public void run() {
+                        mImageIndex = 0;
+                        displayImage(mImageIndex);
+                    }
+                });
+            }
+        }, null).execute(files);
     }
 
     private List<URL> getThumbUrlsForFiles(Image[] files) {
