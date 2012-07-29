@@ -124,7 +124,8 @@ public class DownloadFilesTask extends TaskWithProgressAndListener<URL, Integer,
                 }
             }
             catch (Exception e) {
-                // TODO Remember data about failures and report them to listener
+                results.add(null);
+
                 e.printStackTrace();
             }
             finally {

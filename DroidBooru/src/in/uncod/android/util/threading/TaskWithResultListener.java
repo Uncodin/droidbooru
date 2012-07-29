@@ -37,5 +37,5 @@ public abstract class TaskWithResultListener<TParams, TProgress, TResult> extend
         if (mListener != null) {
             mListener.onTaskResult(result);
         }
-    };
+    }
 }

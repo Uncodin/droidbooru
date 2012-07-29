@@ -36,7 +36,7 @@ public abstract class TaskWithProgressAndListener<TParams, TProgress, TResult> e
     }
 
     @Override
-    protected final void onPostExecute(final TResult result) {
+    protected void onPostExecute(final TResult result) {
         super.onPostExecute(result);
 
         if (mDialog != null) {
