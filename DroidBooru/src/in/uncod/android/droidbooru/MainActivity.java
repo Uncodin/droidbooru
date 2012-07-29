@@ -145,15 +145,14 @@ public class MainActivity extends SherlockActivity {
         mDataDirectory = getExternalFilesDir(null);
         Log.d(TAG, "Using data directory: " + mDataDirectory.getAbsolutePath());
 
-        initAndAuthNativ();
-
         Intent intent = getIntent();
         if (Intent.ACTION_SEND.equals(intent.getAction())) {
             // Started via Share request
             Log.d(TAG, "Received single file upload request");
 
             // Uploading a single file
-            uploadFiles(new File[] { getFileForUri((Uri) intent.getParcelableExtra(Intent.EXTRA_STREAM)) });
+            uploadFiles(new File[] { getFileForUri((Uri) intent.getParcelableExtra(Intent.EXTRA_STREAM)) },
+                    null);
 
             finish();
         }
@@ -172,12 +171,13 @@ public class MainActivity extends SherlockActivity {
                 i++;
             }
 
-            uploadFiles(files);
+            uploadFiles(files, null);
 
             finish();
         }
         else {
             // Normal launch
+            initAndAuthNativ();
             initializeUI();
         }
     }
@@ -336,7 +336,12 @@ public class MainActivity extends SherlockActivity {
                 File uploadFile = getFileForUri(uri);
 
                 if (uploadFile != null) {
-                    uploadFiles(new File[] { uploadFile });
+                    uploadFiles(new File[] { uploadFile }, new Runnable() {
+                        public void run() {
+                            // Download and display the image that was just uploaded
+                            downloadFiles(1, 0, true);
+                        }
+                    });
                 }
             }
             break;
@@ -345,15 +350,16 @@ public class MainActivity extends SherlockActivity {
         }
     }
 
-    private void uploadFiles(final File[] files) {
+    private void uploadFiles(final File[] files, final Runnable runWhenFinished) {
         String email = mAccount.name;
         String tags = "droidbooru,"
                 + new SimpleDateFormat("MM-dd-yy").format(Calendar.getInstance().getTime());
 
         new BooruUploadTask(mServerFilePostUrl, email, tags, new OnResultListener<Void>() {
             public void onTaskResult(Void result) {
-                // Download and display the image(s) that were just uploaded
-                downloadFiles(files.length, 0, true);
+                if (runWhenFinished != null) {
+                    runWhenFinished.run();
+                }
             }
         }, null).execute(files);
     }
