@@ -320,7 +320,7 @@ public class MainActivity extends SherlockActivity {
 
     private void uploadFiles(final File[] files) {
         String email = "droidbooru@ironclad.mobi";
-        String tags = "droidbooru-android,"
+        String tags = "droidbooru,"
                 + new SimpleDateFormat("MM-dd-yy").format(Calendar.getInstance().getTime());
 
         new BooruUploadTask(mServerFilePostUrl, email, tags, new OnResultListener<Void>() {
