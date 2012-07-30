@@ -9,5 +9,8 @@
     <string name="select_server">Select Server</string>
     <string name="server_list">Server List</string>
     <string name="desc_gallery_thumbnail">Thumbnail</string>
+    <string name="could_not_connect">Could not connect to server</string>
+    <string name="uploading">Uploading&#8230;</string>
+    <string name="upload_failed">Unable to upload, try again later</string>
 
 </resources>

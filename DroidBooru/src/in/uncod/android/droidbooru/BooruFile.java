@@ -68,6 +68,7 @@ public class BooruFile {
         catch (MalformedURLException e) {
             Log.e(TAG, "Couldn't parse URL for file " + file.getFilehash() + "." + extension);
         }
+
         return fileThumbUrl;
     }
 

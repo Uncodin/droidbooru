@@ -36,6 +36,7 @@
                 <data android:mimeType="*/*" />
             </intent-filter>
         </activity>
+        <activity android:name=".GalleryActivity" />
         <activity android:name=".LoginSettingsActivity" />
     </application>
 

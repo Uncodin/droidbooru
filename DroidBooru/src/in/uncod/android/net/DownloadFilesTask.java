@@ -40,7 +40,7 @@ public class DownloadFilesTask extends TaskWithProgressAndListener<URL, Integer,
      *            on the dialog before the task is executed.
      */
     public DownloadFilesTask(File destinationPath, boolean overwriteExisting,
-            OnResultListener<List<File>> listener, ProgressDialog dialog) {
+            OnTaskResultListener<List<File>> listener, ProgressDialog dialog) {
         super(listener, dialog);
 
         if (destinationPath == null || !destinationPath.exists() || !destinationPath.isDirectory())

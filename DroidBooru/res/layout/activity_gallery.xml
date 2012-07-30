@@ -8,8 +8,11 @@
         android:id="@+id/images"
         android:layout_width="fill_parent"
         android:layout_height="fill_parent"
+        android:background="@android:color/black"
         android:gravity="center"
+        android:horizontalSpacing="2dp"
         android:numColumns="3"
-        android:stretchMode="columnWidth" />
+        android:stretchMode="columnWidth"
+        android:verticalSpacing="2dp" />
 
 </FrameLayout>

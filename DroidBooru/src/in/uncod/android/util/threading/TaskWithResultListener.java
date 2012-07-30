@@ -10,7 +10,7 @@ public abstract class TaskWithResultListener<TParams, TProgress, TResult> extend
     /**
      * Interface for task result listeners.
      */
-    public static interface OnResultListener<TResult> {
+    public static interface OnTaskResultListener<TResult> {
         /**
          * This method will be activated when the task completes.
          * 
@@ -26,11 +26,11 @@ public abstract class TaskWithResultListener<TParams, TProgress, TResult> extend
      * @param listener
      *            If not null, the result listener will be activated when the task has completed.
      */
-    public TaskWithResultListener(OnResultListener<TResult> listener) {
+    public TaskWithResultListener(OnTaskResultListener<TResult> listener) {
         mListener = listener;
     }
 
-    private OnResultListener<TResult> mListener;
+    private OnTaskResultListener<TResult> mListener;
 
     @Override
     protected void onPostExecute(TResult result) {

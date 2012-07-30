@@ -1,12 +1,15 @@
 package in.uncod.android.util.threading;
 
 import android.app.ProgressDialog;
+import android.util.Log;
 
 /**
  * A task that accepts an optional results callback and progress dialog.
  */
 public abstract class TaskWithProgressAndListener<TParams, TProgress, TResult> extends
         TaskWithResultListener<TParams, TProgress, TResult> {
+    private static final String TAG = "TaskWithProgressAndListener";
+
     protected ProgressDialog mDialog;
 
     /**
@@ -19,7 +22,7 @@ public abstract class TaskWithProgressAndListener<TParams, TProgress, TResult> e
      *            as cancellation, style, etc. should be set on the dialog before the task is executed, and progress
      *            updates must be handled manually.
      */
-    public TaskWithProgressAndListener(OnResultListener<TResult> listener, ProgressDialog dialog) {
+    public TaskWithProgressAndListener(OnTaskResultListener<TResult> listener, ProgressDialog dialog) {
         super(listener);
 
         mDialog = dialog;
@@ -31,7 +34,15 @@ public abstract class TaskWithProgressAndListener<TParams, TProgress, TResult> e
 
         if (mDialog != null) {
             mDialog.setProgress(0);
-            mDialog.show();
+
+            try {
+                mDialog.show();
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+
+                Log.e(TAG, "Unable to show dialog; did you forget to start the task on a UI thread?");
+            }
         }
     }
 

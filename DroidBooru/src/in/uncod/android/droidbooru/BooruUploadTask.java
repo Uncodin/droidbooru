@@ -20,7 +20,7 @@ import android.util.Log;
  * 
  * Use the execute() method to start the upload in a background thread.
  */
-public class BooruUploadTask extends TaskWithProgressAndListener<File, Void, Void> {
+public class BooruUploadTask extends TaskWithProgressAndListener<File, Void, Boolean> {
     private static final String TAG = "BooruUploadTask";
 
     private URI mApiUrl;
@@ -43,7 +43,7 @@ public class BooruUploadTask extends TaskWithProgressAndListener<File, Void, Voi
      *            If not null, the progress dialog will be automatically displayed and show the current progress towards
      *            upload completion
      */
-    public BooruUploadTask(URI apiUrl, String email, String tags, OnResultListener<Void> listener,
+    public BooruUploadTask(URI apiUrl, String email, String tags, OnTaskResultListener<Boolean> listener,
             ProgressDialog dialog) {
         super(listener, dialog);
 
@@ -53,7 +53,9 @@ public class BooruUploadTask extends TaskWithProgressAndListener<File, Void, Voi
     }
 
     @Override
-    protected Void doInBackground(File... params) {
+    protected Boolean doInBackground(File... params) {
+        boolean error = false;
+
         HttpClient client = new DefaultHttpClient();
         HttpPost post = new HttpPost(mApiUrl);
 
@@ -62,7 +64,7 @@ public class BooruUploadTask extends TaskWithProgressAndListener<File, Void, Voi
 
         int i = 0;
         for (File file : params) {
-            if (file != null && file.exists()) {
+            if (file != null && file.exists() && file.length() > 0) {
                 entity.addPart("file" + i, new FileBody(file));
             }
 
@@ -81,13 +83,13 @@ public class BooruUploadTask extends TaskWithProgressAndListener<File, Void, Voi
         }
         catch (Exception e) {
             mException = e;
+            error = true;
         }
 
         if (mException != null) {
-            // TODO Notify listener of exception via result object
             mException.printStackTrace();
         }
 
-        return null;
+        return error;
     }
 }
