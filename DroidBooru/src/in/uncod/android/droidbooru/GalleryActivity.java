@@ -125,6 +125,11 @@ public class GalleryActivity extends SherlockActivity {
      */
     private static final int REQ_CODE_CHOOSE_SHARING_APP = 1;
 
+    /**
+     * The number of files to populate the gallery with on the initial request
+     */
+    protected static final int NUM_FILES_INITIAL_DOWNLOAD = 15;
+
     private Backend mBackend;
 
     private GridView mGridView;
@@ -132,7 +137,7 @@ public class GalleryActivity extends SherlockActivity {
 
     private Account mAccount;
     private Intent mLaunchIntent;
-    private boolean mDownloadWhileScrolling;
+    private boolean mDownloadWhileScrolling = true;
 
     private Handler mUiHandler;
     private ActionMode mActionMode;
@@ -160,8 +165,8 @@ public class GalleryActivity extends SherlockActivity {
                 else {
                     runOnUiThread(new Runnable() {
                         public void run() {
-                            mBackend.downloadFiles(10, 0, mUiHandler, createDownloadingProgressDialog(),
-                                    new UpdateDisplayedFilesCallback());
+                            mBackend.downloadFiles(NUM_FILES_INITIAL_DOWNLOAD, 0, mUiHandler,
+                                    createDownloadingProgressDialog(), new UpdateDisplayedFilesCallback());
                         }
                     });
                 }
@@ -180,6 +185,20 @@ public class GalleryActivity extends SherlockActivity {
                 .setOnMenuItemClickListener(new OnMenuItemClickListener() {
                     public boolean onMenuItemClick(com.actionbarsherlock.view.MenuItem item) {
                         showFileChooser();
+
+                        return true;
+                    }
+                });
+
+        // Refresh
+        menu.add(R.string.refresh).setShowAsActionFlags(MenuItem.SHOW_AS_ACTION_NEVER)
+                .setOnMenuItemClickListener(new OnMenuItemClickListener() {
+                    public boolean onMenuItemClick(com.actionbarsherlock.view.MenuItem item) {
+                        mBooruFileAdapter.clear();
+                        mDownloadWhileScrolling = true;
+
+                        Backend.getInstance().downloadFiles(NUM_FILES_INITIAL_DOWNLOAD, 0, mUiHandler,
+                                createDownloadingProgressDialog(), new UpdateDisplayedFilesCallback());
 
                         return true;
                     }
@@ -319,20 +338,23 @@ public class GalleryActivity extends SherlockActivity {
 
             public void onScroll(AbsListView view, int firstVisibleItem, int visibleItemCount,
                     int totalItemCount) {
-                if (!mDownloadWhileScrolling && totalItemCount > 0
+                if (mDownloadWhileScrolling && totalItemCount > 0
                         && totalItemCount - (firstVisibleItem + visibleItemCount) <= visibleItemCount * 3) {
-                    mDownloadWhileScrolling = true;
+                    mDownloadWhileScrolling = false;
 
                     // User only has three pages of items left to scroll through; load more
-                    mBackend.downloadFiles(20, mBooruFileAdapter.getCount(), mUiHandler, null,
-                            new UpdateDisplayedFilesCallback() {
+                    mBackend.downloadFiles(NUM_FILES_INITIAL_DOWNLOAD, mBooruFileAdapter.getCount(),
+                            mUiHandler, null, new UpdateDisplayedFilesCallback() {
                                 @Override
                                 public void onFilesDownloaded(int offset, BooruFile[] bFiles) {
                                     super.onFilesDownloaded(offset, bFiles);
 
-                                    if (bFiles.length > 0) {
+                                    if (bFiles.length == 0) {
                                         // If we don't get anything back, assume we're at the end of the list
                                         mDownloadWhileScrolling = false;
+                                    }
+                                    else {
+                                        mDownloadWhileScrolling = true;
                                     }
                                 }
                             });

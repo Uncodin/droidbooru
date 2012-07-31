@@ -175,6 +175,7 @@ public class Backend {
      */
     public void downloadFiles(int number, final int offset, final Handler uiHandler,
             final ProgressDialog dialog, final FilesDownloadedCallback callback) {
+        Log.d(TAG, "Downloading " + number + " files from offset " + offset);
         mDatastore.externalQueryImage(
                 KeyPredicate.defaultPredicate().orderBy("uploadedDate", true).limit(number).offset(offset),
                 null, new AbstractNetworkCallbacks() {
