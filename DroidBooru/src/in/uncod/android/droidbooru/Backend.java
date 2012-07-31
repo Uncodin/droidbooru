@@ -72,7 +72,7 @@ public class Backend {
         mServerFileRequestUrl = URI.create(mServerAddress + "/img/");
         mServerThumbRequestUrl = URI.create(mServerAddress + "/thumb/");
 
-        mDatastore = ORMDatastore.create(new File(mDataDirectory, "droidbooru.db").getAbsolutePath());
+        mDatastore = ORMDatastore.create(new File(mCacheDirectory, "droidbooru.db").getAbsolutePath());
         mDatastore.setDownloadPathPrefix(mDataDirectory.getAbsolutePath() + File.separator);
         mDatastore.setNetworkHandler(new HttpClientNetwork(mServerNativApiUrl.toString()));
     }
