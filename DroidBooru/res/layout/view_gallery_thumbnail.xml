@@ -5,8 +5,8 @@
 
     <ImageView
         android:id="@+id/thumbnail_image"
+        style="@style/GalleryThumbnail"
         android:layout_width="match_parent"
-        android:layout_height="100dp"
         android:contentDescription="@string/desc_gallery_thumbnail"
         android:scaleType="centerCrop" >
     </ImageView>
