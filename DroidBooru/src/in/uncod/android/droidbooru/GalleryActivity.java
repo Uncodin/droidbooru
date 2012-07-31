@@ -152,7 +152,7 @@ public class GalleryActivity extends SherlockActivity {
                 .getParcelable(getResources().getString(R.string.pref_account_name));
 
         mBackend = Backend.getInstance();
-        mBackend.connect(new BackendConnectedCallback() {
+        if (!mBackend.connect(new BackendConnectedCallback() {
             public void onBackendConnected(boolean error) {
                 if (error) {
                     runOnUiThread(new Runnable() {
@@ -171,7 +171,10 @@ public class GalleryActivity extends SherlockActivity {
                     });
                 }
             }
-        });
+        })) {
+            // Not connected to the network
+            Toast.makeText(this, R.string.network_disconnected, Toast.LENGTH_LONG).show();
+        }
 
         initializeUI();
 

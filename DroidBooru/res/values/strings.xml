@@ -19,5 +19,6 @@
     <string name="items_selected">\u0020selected</string>
     <string name="share_files_with">Share link(s) using</string>
     <string name="refresh">Refresh</string>
+    <string name="network_disconnected">Your device is not connected to the internet, try again later</string>
 
 </resources>

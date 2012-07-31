@@ -59,7 +59,7 @@ public class MainActivity extends SherlockActivity {
                 getExternalFilesDir(null),
                 getExternalCacheDir(),
                 mPrefs.getString(resources.getString(R.string.pref_selected_server),
-                        resources.getString(R.string.dv_pref_selected_server)));
+                        resources.getString(R.string.dv_pref_selected_server)), new ConnectivityAgent(this));
 
         Intent intent = getIntent();
         if (Intent.ACTION_SEND.equals(intent.getAction())) {

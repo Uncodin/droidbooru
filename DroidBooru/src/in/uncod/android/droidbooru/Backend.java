@@ -30,6 +30,21 @@ import android.os.Handler;
 import android.util.Log;
 
 public class Backend {
+    private class AuthCallback extends AbstractNetworkCallbacks {
+        protected boolean mError;
+        protected int mErrorCode;
+        protected String mErrorMessage;
+
+        @Override
+        public void onError(INetworkHandler handler, int errorCode, String message) {
+            super.onError(handler, errorCode, message);
+
+            mError = true;
+            mErrorCode = errorCode;
+            mErrorMessage = message;
+        }
+    }
+
     private static final String TAG = null;
 
     private static Backend mInstance;
@@ -45,8 +60,11 @@ public class Backend {
     private URI mServerFileRequestUrl;
     private URI mServerThumbRequestUrl;
 
-    public static Backend init(File dataDirectory, File cacheDirectory, String serverAddress) {
-        mInstance = new Backend(dataDirectory, cacheDirectory, serverAddress);
+    private IConnectivityStatus mConnectionChecker;
+
+    public static Backend init(File dataDirectory, File cacheDirectory, String serverAddress,
+            IConnectivityStatus connectionChecker) {
+        mInstance = new Backend(dataDirectory, cacheDirectory, serverAddress, connectionChecker);
 
         return mInstance;
     }
@@ -58,7 +76,10 @@ public class Backend {
         return mInstance;
     }
 
-    private Backend(File dataDirectory, File cacheDirectory, String serverAddress) {
+    private Backend(File dataDirectory, File cacheDirectory, String serverAddress,
+            IConnectivityStatus connectionChecker) {
+        mConnectionChecker = connectionChecker;
+
         // Get server address
         mServerAddress = URI.create(HttpHost.DEFAULT_SCHEME_NAME + "://" + serverAddress);
 
@@ -77,7 +98,10 @@ public class Backend {
         mDatastore.setNetworkHandler(new HttpClientNetwork(mServerNativApiUrl.toString()));
     }
 
-    void connect(final BackendConnectedCallback callback) {
+    public boolean connect(final BackendConnectedCallback callback) {
+        if (!mConnectionChecker.canConnectToNetwork())
+            return false;
+
         mDatastore.authenticate("test", "test", new AbstractNetworkCallbacks() {
             private boolean mError;
 
@@ -96,6 +120,8 @@ public class Backend {
                     callback.onBackendConnected(mError);
             }
         });
+
+        return true;
     }
 
     public File getFileForUri(Uri uri, ContentResolver resolver) {
@@ -146,8 +172,32 @@ public class Backend {
         return urls;
     }
 
-    public void uploadFiles(final File[] files, final String email, final String tags, Handler uiHandler,
-            final FilesUploadedCallback runWhenFinished, final ProgressDialog dialog) {
+    public boolean uploadFiles(final File[] files, final String email, final String tags,
+            final Handler uiHandler, final FilesUploadedCallback callback, final ProgressDialog dialog) {
+        if (!mConnectionChecker.canConnectToNetwork())
+            return false;
+
+        if (!mDatastore.hasAuthenticationToken()) {
+            mDatastore.authenticate("test", "test", new AuthCallback() {
+                public void finished(String extras) {
+                    if (!mError) {
+                        internalUploadFiles(files, email, tags, uiHandler, callback, dialog);
+                    }
+                    else {
+                        callback.onFilesUploaded(true);
+                    }
+                }
+            });
+        }
+        else {
+            internalUploadFiles(files, email, tags, uiHandler, callback, dialog);
+        }
+
+        return true;
+    }
+
+    private void internalUploadFiles(final File[] files, final String email, final String tags,
+            Handler uiHandler, final FilesUploadedCallback runWhenFinished, final ProgressDialog dialog) {
         uiHandler.post(new Runnable() {
             public void run() {
                 new BooruUploadTask(mServerFilePostUrl, email, tags, new OnTaskResultListener<Boolean>() {
@@ -172,8 +222,36 @@ public class Backend {
      *            The number of files to retrieve
      * @param offset
      *            The number of files to skip
+     * @return
      */
-    public void downloadFiles(int number, final int offset, final Handler uiHandler,
+    public boolean downloadFiles(final int number, final int offset, final Handler uiHandler,
+            final ProgressDialog dialog, final FilesDownloadedCallback callback) {
+        if (!mConnectionChecker.canConnectToNetwork())
+            return false;
+
+        if (!mDatastore.hasAuthenticationToken()) {
+            mDatastore.authenticate("test", "test", new AuthCallback() {
+                @Override
+                public void finished(String extras) {
+                    super.finished(extras);
+
+                    if (!mError) {
+                        queryExternalAndDownload(number, offset, uiHandler, dialog, callback);
+                    }
+                    else {
+                        callback.onFilesDownloaded(offset, new BooruFile[0]);
+                    }
+                }
+            });
+        }
+        else {
+            queryExternalAndDownload(number, offset, uiHandler, dialog, callback);
+        }
+
+        return true;
+    }
+
+    private void queryExternalAndDownload(int number, final int offset, final Handler uiHandler,
             final ProgressDialog dialog, final FilesDownloadedCallback callback) {
         Log.d(TAG, "Downloading " + number + " files from offset " + offset);
         mDatastore.externalQueryImage(
