@@ -1,6 +1,8 @@
 package in.uncod.android.droidbooru;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 
 import android.accounts.Account;
 import android.app.ProgressDialog;
@@ -21,6 +23,7 @@ import android.widget.AbsListView;
 import android.widget.AbsListView.OnScrollListener;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemClickListener;
+import android.widget.AdapterView.OnItemLongClickListener;
 import android.widget.ArrayAdapter;
 import android.widget.FrameLayout;
 import android.widget.GridView;
@@ -28,10 +31,70 @@ import android.widget.ImageView;
 import android.widget.Toast;
 
 import com.actionbarsherlock.app.SherlockActivity;
+import com.actionbarsherlock.view.ActionMode;
 import com.actionbarsherlock.view.Menu;
 import com.actionbarsherlock.view.MenuItem.OnMenuItemClickListener;
 
 public class GalleryActivity extends SherlockActivity {
+    private class GalleryActionModeHandler implements ActionMode.Callback {
+        public boolean onCreateActionMode(ActionMode mode, Menu menu) {
+            // Setup menu and mode title
+            mode.setTitle(R.string.select_files_to_share);
+            menu.add(R.string.share).setOnMenuItemClickListener(new OnMenuItemClickListener() {
+                public boolean onMenuItemClick(com.actionbarsherlock.view.MenuItem item) {
+                    if (mSelectedItems.size() > 1) {
+                        // Sharing multiple links
+                        Intent intent = new Intent();
+                        intent.setAction(Intent.ACTION_SEND);
+                        intent.putExtra(Intent.EXTRA_STREAM,
+                                Uri.fromFile(mBackend.createLinkContainer(mSelectedItems)));
+                        intent.setType("text/plain");
+                        startActivityForResult(
+                                Intent.createChooser(intent,
+                                        getResources().getString(R.string.share_files_with)),
+                                REQ_CODE_CHOOSE_SHARING_APP);
+                    }
+                    else if (mSelectedItems.size() == 1) {
+                        // Sharing a single link
+                        Intent intent = new Intent();
+                        intent.setAction(Intent.ACTION_SEND);
+                        intent.putExtra(Intent.EXTRA_TEXT, mSelectedItems.get(0).getActualUrl().toString());
+                        intent.setType("text/plain");
+                        startActivityForResult(
+                                Intent.createChooser(intent,
+                                        getResources().getString(R.string.share_files_with)),
+                                REQ_CODE_CHOOSE_SHARING_APP);
+                    }
+
+                    return true;
+                }
+            });
+
+            return true;
+        }
+
+        public void onDestroyActionMode(ActionMode mode) {
+            mActionMode = null;
+            mSelectedItems.clear();
+        }
+
+        public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
+            // Update selected item count
+            if (mSelectedItems.size() > 0) {
+                mode.setSubtitle(mSelectedItems.size() + getResources().getString(R.string.items_selected));
+            }
+            else {
+                mode.setSubtitle("");
+            }
+
+            return true;
+        }
+
+        public boolean onActionItemClicked(ActionMode mode, com.actionbarsherlock.view.MenuItem item) {
+            return false;
+        }
+    }
+
     private class UpdateDisplayedFilesCallback implements FilesDownloadedCallback {
         public void onFilesDownloaded(int offset, BooruFile[] bFiles) {
             if (bFiles.length > 0) {
@@ -53,9 +116,14 @@ public class GalleryActivity extends SherlockActivity {
     private static final String TAG = "GalleryActivity";
 
     /**
-     * Request code for uploading a file
+     * Request code for choosing a file to upload
      */
-    private static final int REQ_CODE_UPLOAD_FILE = 0;
+    private static final int REQ_CODE_CHOOSE_FILE_UPLOAD = 0;
+
+    /**
+     * Request code for choosing which app to share files with
+     */
+    private static final int REQ_CODE_CHOOSE_SHARING_APP = 1;
 
     private Backend mBackend;
 
@@ -67,6 +135,8 @@ public class GalleryActivity extends SherlockActivity {
     private boolean mDownloadWhileScrolling;
 
     private Handler mUiHandler;
+    private ActionMode mActionMode;
+    private List<BooruFile> mSelectedItems = new ArrayList<BooruFile>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -142,7 +212,7 @@ public class GalleryActivity extends SherlockActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         switch (requestCode) {
-        case REQ_CODE_UPLOAD_FILE:
+        case REQ_CODE_CHOOSE_FILE_UPLOAD:
             if (resultCode == RESULT_OK) {
                 // Upload chosen file
                 final Uri uri = data.getData();
@@ -180,6 +250,13 @@ public class GalleryActivity extends SherlockActivity {
                     };
                 }.execute((Void) null);
             }
+
+            break;
+        case REQ_CODE_CHOOSE_SHARING_APP:
+            if (resultCode == RESULT_OK) {
+                mActionMode.finish();
+            }
+
             break;
         default:
             super.onActivityResult(requestCode, resultCode, data);
@@ -200,22 +277,37 @@ public class GalleryActivity extends SherlockActivity {
         mGridView = (GridView) findViewById(R.id.images);
         mGridView.setAdapter(mBooruFileAdapter);
 
+        mGridView.setOnItemLongClickListener(new OnItemLongClickListener() {
+            public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
+                if (mActionMode == null) {
+                    mActionMode = startActionMode(new GalleryActionModeHandler());
+                }
+
+                return false;
+            }
+        });
+
         mGridView.setOnItemClickListener(new OnItemClickListener() {
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                try {
+                if (mActionMode == null) {
                     // Launch a viewer for the file
-                    BooruFile bFile = mBooruFileAdapter.getItem(position);
+                    try {
+                        BooruFile bFile = mBooruFileAdapter.getItem(position);
 
-                    mLaunchIntent.setDataAndType(Uri.parse(bFile.getActualUrl().toString()),
-                            bFile.getMimeForLaunch());
+                        mLaunchIntent.setDataAndType(Uri.parse(bFile.getActualUrl().toString()),
+                                bFile.getMimeForLaunch());
 
-                    startActivity(mLaunchIntent);
+                        startActivity(mLaunchIntent);
+                    }
+                    catch (ActivityNotFoundException e) {
+                        e.printStackTrace();
+
+                        Toast.makeText(GalleryActivity.this,
+                                "Sorry, your device can't view the original file!", Toast.LENGTH_LONG).show();
+                    }
                 }
-                catch (ActivityNotFoundException e) {
-                    e.printStackTrace();
-
-                    Toast.makeText(GalleryActivity.this, "Sorry, your device can't view the original file!",
-                            Toast.LENGTH_LONG).show();
+                else {
+                    updateSelectedFiles(position);
                 }
             }
         });
@@ -254,7 +346,7 @@ public class GalleryActivity extends SherlockActivity {
         intent.setType("*/*");
         intent.addCategory(Intent.CATEGORY_OPENABLE);
 
-        startActivityForResult(intent, REQ_CODE_UPLOAD_FILE);
+        startActivityForResult(intent, REQ_CODE_CHOOSE_FILE_UPLOAD);
     }
 
     private ProgressDialog createDownloadingProgressDialog() {
@@ -273,5 +365,19 @@ public class GalleryActivity extends SherlockActivity {
         dialog.setCancelable(false);
 
         return dialog;
+    }
+
+    private void updateSelectedFiles(int position) {
+        // Add/remove in list of selected items
+        BooruFile file = mBooruFileAdapter.getItem(position);
+
+        if (mSelectedItems.contains(file)) {
+            mSelectedItems.remove(file);
+        }
+        else {
+            mSelectedItems.add(file);
+        }
+
+        mActionMode.invalidate();
     }
 }

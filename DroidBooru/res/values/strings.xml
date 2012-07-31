@@ -1,6 +1,7 @@
 <resources>
 
     <string name="app_name">DroidBooru</string>
+    <!-- XML entity used for ellipsis '...': -->
     <string name="downloading">Downloading&#8230;</string>
     <string name="processing">Processing&#8230;</string>
     <string name="upload">Upload</string>
@@ -12,5 +13,10 @@
     <string name="could_not_connect">Could not connect to server</string>
     <string name="uploading">Uploading&#8230;</string>
     <string name="upload_failed">Unable to upload, try again later</string>
+    <string name="share">Share</string>
+    <string name="select_files_to_share">Select files to share</string>
+    <!-- Unicode used for ' ' character at beginning: -->
+    <string name="items_selected">\u0020selected</string>
+    <string name="share_files_with">Share link(s) using</string>
 
 </resources>

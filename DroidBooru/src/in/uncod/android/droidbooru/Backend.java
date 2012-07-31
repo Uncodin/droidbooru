@@ -11,6 +11,7 @@ import in.uncod.nativ.ORMDatastore;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
@@ -103,7 +104,7 @@ public class Backend {
         if (uri.getScheme().equals(ContentResolver.SCHEME_CONTENT)) {
             try {
                 // Copy the file to our cache
-                retFile = File.createTempFile("upload_", ".tmp", mCacheDirectory);
+                retFile = File.createTempFile("upload", ".tmp", mCacheDirectory);
 
                 InputStream inStream = resolver.openInputStream(uri);
                 FileOutputStream outStream = new FileOutputStream(retFile);
@@ -228,5 +229,33 @@ public class Backend {
         }
 
         return bFiles;
+    }
+
+    /**
+     * Creates a text file containing HTTP links to the given files
+     * 
+     * @param files
+     *            The files whose links will be included
+     * 
+     * @return A File pointing to the text file containing the links
+     */
+    public File createLinkContainer(List<BooruFile> files) {
+        File file = null;
+        try {
+            file = File.createTempFile("links", ".txt", mCacheDirectory);
+
+            FileWriter writer = new FileWriter(file);
+
+            for (BooruFile bFile : files) {
+                writer.write(bFile.getActualUrl().toString() + "\n");
+            }
+
+            writer.flush();
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return file;
     }
 }
