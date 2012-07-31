@@ -73,6 +73,13 @@ public class MainActivity extends SherlockActivity {
                     mAccount.name, Backend.getInstance().getDefaultTags(), mUiHandler,
                     new FilesUploadedCallback() {
                         public void onFilesUploaded(boolean error) {
+                            if (error) {
+                                setResult(RESULT_CANCELED);
+                            }
+                            else {
+                                setResult(RESULT_OK);
+                            }
+
                             finish();
                         }
                     }, GalleryActivity.createUploadingProgressDialog(MainActivity.this));
@@ -95,6 +102,13 @@ public class MainActivity extends SherlockActivity {
             Backend.getInstance().uploadFiles(files, mAccount.name, Backend.getInstance().getDefaultTags(),
                     mUiHandler, new FilesUploadedCallback() {
                         public void onFilesUploaded(boolean error) {
+                            if (error) {
+                                setResult(RESULT_CANCELED);
+                            }
+                            else {
+                                setResult(RESULT_OK);
+                            }
+
                             finish();
                         }
                     }, GalleryActivity.createUploadingProgressDialog(MainActivity.this));
