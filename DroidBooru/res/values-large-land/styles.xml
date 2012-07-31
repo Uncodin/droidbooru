@@ -6,7 +6,7 @@
     </style>
 
     <style name="GalleryThumbnail">
-        <item name="android:layout_height">100dp</item>
+        <item name="android:layout_height">150dp</item>
     </style>
 
 </resources>
