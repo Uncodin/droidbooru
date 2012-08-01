@@ -23,6 +23,11 @@ import com.actionbarsherlock.view.MenuItem.OnMenuItemClickListener;
 public class MainActivity extends SherlockActivity {
     private static final String TAG = "MainActivity";
 
+    /**
+     * Request code to get a single file
+     */
+    private static final int REQ_CODE_GET_FILE = 0;
+
     private Account mAccount;
     private SharedPreferences mPrefs;
 
@@ -68,7 +73,7 @@ public class MainActivity extends SherlockActivity {
 
             // Uploading a single file
             Backend.getInstance().uploadFiles(
-                    new File[] { Backend.getInstance().getFileForUri(
+                    new File[] { Backend.getInstance().createTempFileForUri(
                             (Uri) intent.getParcelableExtra(Intent.EXTRA_STREAM), getContentResolver()) },
                     mAccount.name, Backend.getInstance().getDefaultTags(), mUiHandler,
                     new FilesUploadedCallback() {
@@ -94,7 +99,7 @@ public class MainActivity extends SherlockActivity {
 
             int i = 0;
             for (Uri uri : fileUris) {
-                files[i] = Backend.getInstance().getFileForUri(uri, getContentResolver());
+                files[i] = Backend.getInstance().createTempFileForUri(uri, getContentResolver());
 
                 i++;
             }
@@ -114,9 +119,17 @@ public class MainActivity extends SherlockActivity {
                     }, GalleryActivity.createUploadingProgressDialog(MainActivity.this));
         }
         else {
-            // Normal launch
-            startActivity(new Intent(this, GalleryActivity.class).putExtra(
-                    resources.getString(R.string.pref_account_name), mAccount));
+            // Need to launch the gallery
+            Intent galleryIntent = new Intent(this, GalleryActivity.class).putExtra(
+                    resources.getString(R.string.pref_account_name), mAccount).setAction(intent.getAction());
+
+            if (intent.getAction().equals(Intent.ACTION_GET_CONTENT)) {
+                startActivityForResult(galleryIntent, REQ_CODE_GET_FILE);
+            }
+            else {
+                startActivity(galleryIntent);
+                finish();
+            }
         }
     }
 
@@ -149,6 +162,18 @@ public class MainActivity extends SherlockActivity {
         }
 
         Log.d(TAG, "Using account " + mAccount.name);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == REQ_CODE_GET_FILE) {
+            // Received data back from gallery; exit
+            setResult(resultCode, data);
+            finish();
+        }
+        else {
+            super.onActivityResult(requestCode, resultCode, data);
+        }
     }
 
     private void storeAccountInPrefs(Account account, Resources resources) {

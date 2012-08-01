@@ -1,6 +1,9 @@
 package in.uncod.android.droidbooru;
 
+import in.uncod.android.util.threading.TaskWithResultListener.OnTaskResultListener;
+
 import java.io.File;
+import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -40,35 +43,100 @@ public class GalleryActivity extends SherlockActivity {
         public boolean onCreateActionMode(ActionMode mode, Menu menu) {
             // Setup menu and mode title
             mode.setTitle(R.string.select_files_to_share);
-            menu.add(R.string.share).setOnMenuItemClickListener(new OnMenuItemClickListener() {
-                public boolean onMenuItemClick(com.actionbarsherlock.view.MenuItem item) {
-                    if (mSelectedItems.size() > 1) {
-                        // Sharing multiple links
-                        Intent intent = new Intent();
-                        intent.setAction(Intent.ACTION_SEND);
-                        intent.putExtra(Intent.EXTRA_STREAM,
-                                Uri.fromFile(mBackend.createLinkContainer(mSelectedItems)));
-                        intent.setType("text/plain");
-                        startActivityForResult(
-                                Intent.createChooser(intent,
-                                        getResources().getString(R.string.share_files_with)),
-                                REQ_CODE_CHOOSE_SHARING_APP);
-                    }
-                    else if (mSelectedItems.size() == 1) {
-                        // Sharing a single link
-                        Intent intent = new Intent();
-                        intent.setAction(Intent.ACTION_SEND);
-                        intent.putExtra(Intent.EXTRA_TEXT, mSelectedItems.get(0).getActualUrl().toString());
-                        intent.setType("text/plain");
-                        startActivityForResult(
-                                Intent.createChooser(intent,
-                                        getResources().getString(R.string.share_files_with)),
-                                REQ_CODE_CHOOSE_SHARING_APP);
-                    }
+            com.actionbarsherlock.view.MenuItem shareMenu = menu.add(R.string.share);
 
-                    return true;
-                }
-            });
+            if (getIntent().getAction().equals(Intent.ACTION_GET_CONTENT)) {
+                // User is selecting a file for another application
+                shareMenu.setOnMenuItemClickListener(new OnMenuItemClickListener() {
+                    public boolean onMenuItemClick(com.actionbarsherlock.view.MenuItem item) {
+                        if (mSelectedItems.size() > 1) {
+                            // Zip up all selected files and send that to the requesting app
+                            Backend.getInstance().downloadAndZipFiles(mSelectedItems,
+                                    new OnTaskResultListener<List<File>>() {
+                                        public void onTaskResult(List<File> result) {
+                                            File zipFile = result.get(0);
+                                            if (zipFile != null) {
+                                                setResult(RESULT_OK,
+                                                        new Intent().setData(Uri.fromFile(zipFile)));
+                                            }
+                                            else {
+                                                Toast.makeText(GalleryActivity.this,
+                                                        R.string.could_not_get_file, Toast.LENGTH_LONG)
+                                                        .show();
+
+                                                setResult(RESULT_CANCELED);
+                                            }
+
+                                            finish();
+                                        }
+                                    }, createDownloadingProgressDialog());
+                        }
+                        else if (mSelectedItems.size() > 0) {
+                            try {
+                                // Download the selected file
+                                Backend.getInstance().downloadTempFileFromHttp(
+                                        Uri.parse(mSelectedItems.get(0).getActualUrl().toString()),
+                                        new OnTaskResultListener<List<File>>() {
+                                            public void onTaskResult(List<File> result) {
+                                                File tempFile = result.get(0);
+                                                if (tempFile != null) {
+                                                    setResult(RESULT_OK,
+                                                            new Intent().setData(Uri.fromFile(tempFile)));
+                                                }
+                                                else {
+                                                    Toast.makeText(GalleryActivity.this,
+                                                            R.string.could_not_get_file, Toast.LENGTH_LONG)
+                                                            .show();
+
+                                                    setResult(RESULT_CANCELED);
+                                                }
+
+                                                finish();
+                                            }
+
+                                        }, createDownloadingProgressDialog());
+                            }
+                            catch (MalformedURLException e) {
+                                e.printStackTrace();
+                            }
+                        }
+
+                        return true;
+                    }
+                });
+            }
+            else {
+                shareMenu.setOnMenuItemClickListener(new OnMenuItemClickListener() {
+                    public boolean onMenuItemClick(com.actionbarsherlock.view.MenuItem item) {
+                        if (mSelectedItems.size() > 1) {
+                            // Sharing multiple links
+                            Intent intent = new Intent();
+                            intent.setAction(Intent.ACTION_SEND);
+                            intent.putExtra(Intent.EXTRA_STREAM,
+                                    Uri.fromFile(mBackend.createLinkContainer(mSelectedItems)));
+                            intent.setType("text/plain");
+                            startActivityForResult(
+                                    Intent.createChooser(intent,
+                                            getResources().getString(R.string.share_files_with)),
+                                    REQ_CODE_CHOOSE_SHARING_APP);
+                        }
+                        else if (mSelectedItems.size() == 1) {
+                            // Sharing a single link
+                            Intent intent = new Intent();
+                            intent.setAction(Intent.ACTION_SEND);
+                            intent.putExtra(Intent.EXTRA_TEXT, mSelectedItems.get(0).getActualUrl()
+                                    .toString());
+                            intent.setType("text/plain");
+                            startActivityForResult(
+                                    Intent.createChooser(intent,
+                                            getResources().getString(R.string.share_files_with)),
+                                    REQ_CODE_CHOOSE_SHARING_APP);
+                        }
+
+                        return true;
+                    }
+                });
+            }
 
             return true;
         }
@@ -76,6 +144,12 @@ public class GalleryActivity extends SherlockActivity {
         public void onDestroyActionMode(ActionMode mode) {
             mActionMode = null;
             mSelectedItems.clear();
+
+            if (getIntent().getAction().equals(Intent.ACTION_GET_CONTENT)) {
+                // User was picking content for another app
+                setResult(RESULT_CANCELED);
+                finish();
+            }
         }
 
         public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
@@ -179,6 +253,10 @@ public class GalleryActivity extends SherlockActivity {
         initializeUI();
 
         mUiHandler = new Handler();
+
+        if (getIntent().getAction().equals(Intent.ACTION_GET_CONTENT)) {
+            mActionMode = startActionMode(new GalleryActionModeHandler());
+        }
     }
 
     @Override
@@ -243,7 +321,7 @@ public class GalleryActivity extends SherlockActivity {
                 new AsyncTask<Void, Void, File>() {
                     @Override
                     protected File doInBackground(Void... params) {
-                        return mBackend.getFileForUri(uri, getContentResolver());
+                        return mBackend.createTempFileForUri(uri, getContentResolver());
                     }
 
                     protected void onPostExecute(File uploadFile) {

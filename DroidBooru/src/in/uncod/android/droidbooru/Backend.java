@@ -10,6 +10,7 @@ import in.uncod.nativ.KeyPredicate;
 import in.uncod.nativ.ORMDatastore;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -18,8 +19,11 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 import org.apache.http.HttpHost;
 
@@ -124,10 +128,20 @@ public class Backend {
         return true;
     }
 
-    public File getFileForUri(Uri uri, ContentResolver resolver) {
+    /**
+     * Creates a temporary file containing the contents of the file at the given URI
+     * 
+     * @param uri
+     *            A URI describing the file's location
+     * @param resolver
+     *            A content resolver (may be null if you're positive the file isn't at a content:// URI
+     * 
+     * @return The temporary file, or null if the file's contents couldn't be retrieved
+     */
+    public File createTempFileForUri(Uri uri, ContentResolver resolver) {
         File retFile = null;
 
-        if (uri.getScheme().equals(ContentResolver.SCHEME_CONTENT)) {
+        if (resolver != null && uri.getScheme().equals(ContentResolver.SCHEME_CONTENT)) {
             try {
                 // Copy the file to our cache
                 retFile = File.createTempFile("upload", ".tmp", mCacheDirectory);
@@ -158,6 +172,88 @@ public class Backend {
         }
 
         return retFile;
+    }
+
+    /**
+     * Creates a temporary file containing the contents of the file at the given HTTP link
+     * 
+     * @param uri
+     *            A URI describing the file's location
+     * @param callback
+     *            A callback to activate when the file as been downloaded
+     * @param dialog
+     *            An optional progress dialog
+     * 
+     * @throws MalformedURLException
+     *             If the given URI is invalid
+     */
+    public void downloadTempFileFromHttp(final Uri uri, OnTaskResultListener<List<File>> callback,
+            ProgressDialog dialog) throws MalformedURLException {
+        new DownloadFilesTask(mCacheDirectory, false, callback, dialog).execute(new URL(uri.toString()));
+    }
+
+    /**
+     * Creates a temporary zip file containing the given files
+     * 
+     * @param files
+     *            A list of BooruFiles. These files will be downloaded via their 'actual' URL.
+     * @param callback
+     *            A callback to activate once the download has finished. The zip file will be the only file in the
+     *            result list.
+     * @param dialog
+     *            An optional progress dialog
+     */
+    public void downloadAndZipFiles(List<BooruFile> files, final OnTaskResultListener<List<File>> callback,
+            ProgressDialog dialog) {
+        URL[] urls = new URL[files.size()];
+
+        // Get the file URLs
+        int i = 0;
+        for (BooruFile file : files) {
+            urls[i] = file.getActualUrl();
+            i++;
+        }
+
+        new DownloadFilesTask(mCacheDirectory, false, new OnTaskResultListener<List<File>>() {
+            public void onTaskResult(List<File> result) {
+                // Create zip file
+                File zipFile = null;
+                try {
+                    zipFile = File.createTempFile("DroidBooru", ".zip", mCacheDirectory);
+
+                    ZipOutputStream out = new ZipOutputStream(new FileOutputStream(zipFile));
+
+                    for (File file : result) {
+                        if (file == null)
+                            continue;
+
+                        ZipEntry entry = new ZipEntry(file.getName());
+                        out.putNextEntry(entry);
+
+                        FileInputStream inStream = new FileInputStream(file);
+                        byte[] buffer = new byte[4096];
+                        while (inStream.read(buffer) != -1) {
+                            out.write(buffer);
+                        }
+
+                        inStream.close();
+                        out.flush();
+                    }
+
+                    out.flush();
+                    out.close();
+
+                }
+                catch (IOException e) {
+                    zipFile.delete();
+
+                    e.printStackTrace();
+                }
+
+                // Return zip file
+                callback.onTaskResult(Arrays.asList(new File[] { zipFile }));
+            }
+        }, dialog).execute(urls);
     }
 
     private URL[] getThumbUrlsForBooruFiles(BooruFile[] bFiles) {

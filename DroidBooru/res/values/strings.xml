@@ -10,15 +10,16 @@
     <string name="select_server">Select Server</string>
     <string name="server_list">Server List</string>
     <string name="desc_gallery_thumbnail">Thumbnail</string>
-    <string name="could_not_connect">Could not connect to server</string>
+    <string name="could_not_connect">Could not connect to server.</string>
     <string name="uploading">Uploading&#8230;</string>
-    <string name="upload_failed">Unable to upload, try again later</string>
+    <string name="upload_failed">Unable to upload, try again later.</string>
     <string name="share">Share</string>
     <string name="select_files_to_share">Select files to share</string>
     <!-- Unicode used for ' ' character at beginning: -->
     <string name="items_selected">\u0020selected</string>
     <string name="share_files_with">Share link(s) using</string>
     <string name="refresh">Refresh</string>
-    <string name="network_disconnected">Your device is not connected to the internet, try again later</string>
+    <string name="network_disconnected">Your device is not connected to the internet, try again later.</string>
+    <string name="could_not_get_file">Could not download the file.</string>
 
 </resources>
