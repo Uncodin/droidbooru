@@ -522,7 +522,9 @@ public class GalleryActivity extends SherlockActivity {
         intent.setType("*/*");
         intent.addCategory(Intent.CATEGORY_OPENABLE);
 
-        startActivityForResult(intent, REQ_CODE_CHOOSE_FILE_UPLOAD);
+        startActivityForResult(
+                Intent.createChooser(intent, getResources().getString(R.string.upload_file_from)),
+                REQ_CODE_CHOOSE_FILE_UPLOAD);
     }
 
     private ProgressDialog createDownloadingProgressDialog() {
