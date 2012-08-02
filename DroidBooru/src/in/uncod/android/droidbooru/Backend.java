@@ -193,6 +193,30 @@ public class Backend {
     }
 
     /**
+     * Downloads a list of files, using their 'actual' URLs (as opposed to thumbnails)
+     * 
+     * @param files
+     *            The list of BooruFiles to download
+     * @param callback
+     *            A callback to activate once the download has finished
+     * @param dialog
+     *            An optional progress dialog
+     */
+    public void downloadActualFiles(List<BooruFile> files, OnTaskResultListener<List<File>> callback,
+            ProgressDialog dialog) {
+        URL[] urls = new URL[files.size()];
+
+        // Get the file URLs
+        int i = 0;
+        for (BooruFile file : files) {
+            urls[i] = file.getActualUrl();
+            i++;
+        }
+
+        new DownloadFilesTask(mCacheDirectory, false, callback, dialog).execute(urls);
+    }
+
+    /**
      * Creates a temporary zip file containing the given files
      * 
      * @param files
@@ -205,16 +229,7 @@ public class Backend {
      */
     public void downloadAndZipFiles(List<BooruFile> files, final OnTaskResultListener<List<File>> callback,
             ProgressDialog dialog) {
-        URL[] urls = new URL[files.size()];
-
-        // Get the file URLs
-        int i = 0;
-        for (BooruFile file : files) {
-            urls[i] = file.getActualUrl();
-            i++;
-        }
-
-        new DownloadFilesTask(mCacheDirectory, false, new OnTaskResultListener<List<File>>() {
+        downloadActualFiles(files, new OnTaskResultListener<List<File>>() {
             public void onTaskResult(List<File> result) {
                 // Create zip file
                 File zipFile = null;
@@ -253,7 +268,7 @@ public class Backend {
                 // Return zip file
                 callback.onTaskResult(Arrays.asList(new File[] { zipFile }));
             }
-        }, dialog).execute(urls);
+        }, dialog);
     }
 
     private URL[] getThumbUrlsForBooruFiles(BooruFile[] bFiles) {
@@ -426,6 +441,7 @@ public class Backend {
             }
 
             writer.flush();
+            writer.close();
         }
         catch (IOException e) {
             e.printStackTrace();

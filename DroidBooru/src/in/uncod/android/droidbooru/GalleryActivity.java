@@ -40,102 +40,167 @@ import com.actionbarsherlock.view.MenuItem.OnMenuItemClickListener;
 
 public class GalleryActivity extends SherlockActivity {
     private class GalleryActionModeHandler implements ActionMode.Callback {
+        private class GetFilesContentClickListener implements OnMenuItemClickListener {
+            public boolean onMenuItemClick(com.actionbarsherlock.view.MenuItem item) {
+                if (mSelectedItems.size() > 1) {
+                    // Zip up all selected files and send that to the requesting app
+                    Backend.getInstance().downloadAndZipFiles(mSelectedItems,
+                            new OnTaskResultListener<List<File>>() {
+                                public void onTaskResult(List<File> result) {
+                                    File zipFile = result.get(0);
+                                    if (zipFile != null) {
+                                        setResult(RESULT_OK, new Intent().setData(Uri.fromFile(zipFile)));
+                                    }
+                                    else {
+                                        Toast.makeText(GalleryActivity.this, R.string.could_not_get_file,
+                                                Toast.LENGTH_LONG).show();
+
+                                        setResult(RESULT_CANCELED);
+                                    }
+
+                                    finish();
+                                }
+                            }, createDownloadingProgressDialog());
+                }
+                else if (mSelectedItems.size() > 0) {
+                    try {
+                        // Download the selected file
+                        Backend.getInstance().downloadTempFileFromHttp(
+                                Uri.parse(mSelectedItems.get(0).getActualUrl().toString()),
+                                new OnTaskResultListener<List<File>>() {
+                                    public void onTaskResult(List<File> result) {
+                                        File tempFile = result.get(0);
+                                        if (tempFile != null) {
+                                            setResult(RESULT_OK, new Intent().setData(Uri.fromFile(tempFile)));
+                                        }
+                                        else {
+                                            Toast.makeText(GalleryActivity.this, R.string.could_not_get_file,
+                                                    Toast.LENGTH_LONG).show();
+
+                                            setResult(RESULT_CANCELED);
+                                        }
+
+                                        finish();
+                                    }
+
+                                }, createDownloadingProgressDialog());
+                    }
+                    catch (MalformedURLException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+                return true;
+            }
+        }
+
+        private class ShareFileLinksClickListener implements OnMenuItemClickListener {
+            public boolean onMenuItemClick(com.actionbarsherlock.view.MenuItem item) {
+                if (mSelectedItems.size() > 1) {
+                    // Sharing multiple links
+                    Intent intent = new Intent();
+                    intent.setAction(Intent.ACTION_SEND);
+                    intent.putExtra(Intent.EXTRA_STREAM,
+                            Uri.fromFile(mBackend.createLinkContainer(mSelectedItems)));
+                    intent.setType("text/plain");
+                    startActivityForResult(
+                            Intent.createChooser(intent, getResources().getString(R.string.share_files_with)),
+                            REQ_CODE_CHOOSE_SHARING_APP);
+                }
+                else if (mSelectedItems.size() == 1) {
+                    // Sharing a single link
+                    Intent intent = new Intent();
+                    intent.setAction(Intent.ACTION_SEND);
+                    intent.putExtra(Intent.EXTRA_TEXT, mSelectedItems.get(0).getActualUrl().toString());
+                    intent.setType("text/plain");
+                    startActivityForResult(
+                            Intent.createChooser(intent, getResources().getString(R.string.share_files_with)),
+                            REQ_CODE_CHOOSE_SHARING_APP);
+                }
+
+                return true;
+            }
+        }
+
+        private class ShareActualFilesClickListener implements OnMenuItemClickListener {
+            public boolean onMenuItemClick(com.actionbarsherlock.view.MenuItem item) {
+                if (mSelectedItems.size() > 1) {
+                    // Sharing multiple files
+                    final ArrayList<Uri> uris = new ArrayList<Uri>();
+
+                    Backend.getInstance().downloadActualFiles(mSelectedItems,
+                            new OnTaskResultListener<List<File>>() {
+                                public void onTaskResult(List<File> result) {
+                                    // Get URIs for the files
+                                    for (File file : result) {
+                                        if (file != null)
+                                            uris.add(Uri.fromFile(file));
+                                    }
+
+                                    if (uris.size() == 0) {
+                                        Toast.makeText(GalleryActivity.this, R.string.could_not_connect,
+                                                Toast.LENGTH_LONG).show();
+                                        return;
+                                    }
+
+                                    // Send sharing intent
+                                    Intent intent = new Intent();
+                                    intent.setAction(Intent.ACTION_SEND_MULTIPLE);
+                                    intent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris);
+                                    intent.setType("*/*");
+                                    startActivityForResult(
+                                            Intent.createChooser(intent,
+                                                    getResources().getString(R.string.share_files_with)),
+                                            REQ_CODE_CHOOSE_SHARING_APP);
+                                }
+                            }, createDownloadingProgressDialog());
+                }
+                else if (mSelectedItems.size() == 1) {
+                    // Sharing a single file
+                    Backend.getInstance().downloadActualFiles(mSelectedItems,
+                            new OnTaskResultListener<List<File>>() {
+                                public void onTaskResult(List<File> result) {
+                                    if (result.get(0) == null) {
+                                        Toast.makeText(GalleryActivity.this, R.string.could_not_get_file,
+                                                Toast.LENGTH_LONG).show();
+                                        return;
+                                    }
+
+                                    // Send sharing intent
+                                    Intent intent = new Intent();
+                                    intent.setAction(Intent.ACTION_SEND);
+                                    intent.putExtra(Intent.EXTRA_STREAM, Uri.fromFile(result.get(0)));
+                                    intent.setType("*/*");
+                                    startActivityForResult(
+                                            Intent.createChooser(intent,
+                                                    getResources().getString(R.string.share_files_with)),
+                                            REQ_CODE_CHOOSE_SHARING_APP);
+                                }
+                            }, createDownloadingProgressDialog());
+                }
+
+                return true;
+            }
+        }
+
         public boolean onCreateActionMode(ActionMode mode, Menu menu) {
             // Setup menu and mode title
             mode.setTitle(R.string.select_files_to_share);
+
+            // Share option
             com.actionbarsherlock.view.MenuItem shareMenu = menu.add(R.string.share);
 
             if (getIntent().getAction().equals(Intent.ACTION_GET_CONTENT)) {
-                // User is selecting a file for another application
-                shareMenu.setOnMenuItemClickListener(new OnMenuItemClickListener() {
-                    public boolean onMenuItemClick(com.actionbarsherlock.view.MenuItem item) {
-                        if (mSelectedItems.size() > 1) {
-                            // Zip up all selected files and send that to the requesting app
-                            Backend.getInstance().downloadAndZipFiles(mSelectedItems,
-                                    new OnTaskResultListener<List<File>>() {
-                                        public void onTaskResult(List<File> result) {
-                                            File zipFile = result.get(0);
-                                            if (zipFile != null) {
-                                                setResult(RESULT_OK,
-                                                        new Intent().setData(Uri.fromFile(zipFile)));
-                                            }
-                                            else {
-                                                Toast.makeText(GalleryActivity.this,
-                                                        R.string.could_not_get_file, Toast.LENGTH_LONG)
-                                                        .show();
-
-                                                setResult(RESULT_CANCELED);
-                                            }
-
-                                            finish();
-                                        }
-                                    }, createDownloadingProgressDialog());
-                        }
-                        else if (mSelectedItems.size() > 0) {
-                            try {
-                                // Download the selected file
-                                Backend.getInstance().downloadTempFileFromHttp(
-                                        Uri.parse(mSelectedItems.get(0).getActualUrl().toString()),
-                                        new OnTaskResultListener<List<File>>() {
-                                            public void onTaskResult(List<File> result) {
-                                                File tempFile = result.get(0);
-                                                if (tempFile != null) {
-                                                    setResult(RESULT_OK,
-                                                            new Intent().setData(Uri.fromFile(tempFile)));
-                                                }
-                                                else {
-                                                    Toast.makeText(GalleryActivity.this,
-                                                            R.string.could_not_get_file, Toast.LENGTH_LONG)
-                                                            .show();
-
-                                                    setResult(RESULT_CANCELED);
-                                                }
-
-                                                finish();
-                                            }
-
-                                        }, createDownloadingProgressDialog());
-                            }
-                            catch (MalformedURLException e) {
-                                e.printStackTrace();
-                            }
-                        }
-
-                        return true;
-                    }
-                });
+                // User is in the process of selecting file(s) for another application
+                shareMenu.setOnMenuItemClickListener(new GetFilesContentClickListener());
             }
             else {
-                shareMenu.setOnMenuItemClickListener(new OnMenuItemClickListener() {
-                    public boolean onMenuItemClick(com.actionbarsherlock.view.MenuItem item) {
-                        if (mSelectedItems.size() > 1) {
-                            // Sharing multiple links
-                            Intent intent = new Intent();
-                            intent.setAction(Intent.ACTION_SEND);
-                            intent.putExtra(Intent.EXTRA_STREAM,
-                                    Uri.fromFile(mBackend.createLinkContainer(mSelectedItems)));
-                            intent.setType("text/plain");
-                            startActivityForResult(
-                                    Intent.createChooser(intent,
-                                            getResources().getString(R.string.share_files_with)),
-                                    REQ_CODE_CHOOSE_SHARING_APP);
-                        }
-                        else if (mSelectedItems.size() == 1) {
-                            // Sharing a single link
-                            Intent intent = new Intent();
-                            intent.setAction(Intent.ACTION_SEND);
-                            intent.putExtra(Intent.EXTRA_TEXT, mSelectedItems.get(0).getActualUrl()
-                                    .toString());
-                            intent.setType("text/plain");
-                            startActivityForResult(
-                                    Intent.createChooser(intent,
-                                            getResources().getString(R.string.share_files_with)),
-                                    REQ_CODE_CHOOSE_SHARING_APP);
-                        }
+                // Allow sharing of the full-size image to other apps
+                shareMenu.setOnMenuItemClickListener(new ShareActualFilesClickListener());
 
-                        return true;
-                    }
-                });
+                // Share link(s) option
+                menu.add(R.string.share_link).setShowAsActionFlags(MenuItem.SHOW_AS_ACTION_IF_ROOM)
+                        .setOnMenuItemClickListener(new ShareFileLinksClickListener());
             }
 
             return true;
@@ -315,52 +380,57 @@ public class GalleryActivity extends SherlockActivity {
         case REQ_CODE_CHOOSE_FILE_UPLOAD:
             if (resultCode == RESULT_OK) {
                 // Upload chosen file
-                final Uri uri = data.getData();
-                Log.d(TAG, "Upload request for " + uri);
-
-                new AsyncTask<Void, Void, File>() {
-                    @Override
-                    protected File doInBackground(Void... params) {
-                        return mBackend.createTempFileForUri(uri, getContentResolver());
-                    }
-
-                    protected void onPostExecute(File uploadFile) {
-                        if (uploadFile != null && uploadFile.exists()) {
-                            mBackend.uploadFiles(new File[] { uploadFile }, mAccount.name,
-                                    mBackend.getDefaultTags(), mUiHandler, new FilesUploadedCallback() {
-                                        public void onFilesUploaded(final boolean error) {
-                                            runOnUiThread(new Runnable() {
-                                                public void run() {
-                                                    if (!error) {
-                                                        // Download and display the image that was just uploaded
-                                                        mBackend.downloadFiles(1, 0, mUiHandler,
-                                                                createDownloadingProgressDialog(),
-                                                                new UpdateDisplayedFilesCallback());
-                                                    }
-                                                    else {
-                                                        Toast.makeText(GalleryActivity.this,
-                                                                R.string.upload_failed, Toast.LENGTH_LONG)
-                                                                .show();
-                                                    }
-                                                }
-                                            });
-                                        }
-                                    }, createUploadingProgressDialog(GalleryActivity.this));
-                        }
-                    };
-                }.execute((Void) null);
+                uploadChosenFile(data);
             }
 
             break;
         case REQ_CODE_CHOOSE_SHARING_APP:
             if (resultCode == RESULT_OK) {
+                // Finished sharing; clear action mode
                 mActionMode.finish();
+                mActionMode = null;
             }
 
             break;
         default:
             super.onActivityResult(requestCode, resultCode, data);
         }
+    }
+
+    private void uploadChosenFile(Intent data) {
+        final Uri uri = data.getData();
+        Log.d(TAG, "Upload request for " + uri);
+
+        new AsyncTask<Void, Void, File>() {
+            @Override
+            protected File doInBackground(Void... params) {
+                return mBackend.createTempFileForUri(uri, getContentResolver());
+            }
+
+            protected void onPostExecute(File uploadFile) {
+                if (uploadFile != null && uploadFile.exists()) {
+                    mBackend.uploadFiles(new File[] { uploadFile }, mAccount.name, mBackend.getDefaultTags(),
+                            mUiHandler, new FilesUploadedCallback() {
+                                public void onFilesUploaded(final boolean error) {
+                                    runOnUiThread(new Runnable() {
+                                        public void run() {
+                                            if (!error) {
+                                                // Download and display the image that was just uploaded
+                                                mBackend.downloadFiles(1, 0, mUiHandler,
+                                                        createDownloadingProgressDialog(),
+                                                        new UpdateDisplayedFilesCallback());
+                                            }
+                                            else {
+                                                Toast.makeText(GalleryActivity.this, R.string.upload_failed,
+                                                        Toast.LENGTH_LONG).show();
+                                            }
+                                        }
+                                    });
+                                }
+                            }, createUploadingProgressDialog(GalleryActivity.this));
+                }
+            };
+        }.execute((Void) null);
     }
 
     private void initializeUI() {
