@@ -1,5 +1,8 @@
 package in.uncod.android.droidbooru;
 
+import in.uncod.android.droidbooru.net.FilesUploadedCallback;
+import in.uncod.android.net.ConnectivityAgent;
+
 import java.io.File;
 import java.util.ArrayList;
 

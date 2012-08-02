@@ -1,4 +1,4 @@
-package in.uncod.android.droidbooru;
+package in.uncod.android.droidbooru.net;
 
 public interface FilesUploadedCallback {
     void onFilesUploaded(boolean error);

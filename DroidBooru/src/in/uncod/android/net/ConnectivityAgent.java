@@ -1,4 +1,4 @@
-package in.uncod.android.droidbooru;
+package in.uncod.android.net;
 
 import android.content.Context;
 import android.net.ConnectivityManager;

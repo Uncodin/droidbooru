@@ -1,5 +1,8 @@
 package in.uncod.android.droidbooru;
 
+import in.uncod.android.droidbooru.Backend.BackendConnectedCallback;
+import in.uncod.android.droidbooru.net.FilesDownloadedCallback;
+import in.uncod.android.droidbooru.net.FilesUploadedCallback;
 import in.uncod.android.util.threading.TaskWithResultListener.OnTaskResultListener;
 
 import java.io.File;
@@ -44,7 +47,7 @@ public class GalleryActivity extends SherlockActivity {
             public boolean onMenuItemClick(com.actionbarsherlock.view.MenuItem item) {
                 if (mSelectedItems.size() > 1) {
                     // Zip up all selected files and send that to the requesting app
-                    Backend.getInstance().downloadAndZipFiles(mSelectedItems,
+                    Backend.getInstance().downloadAndZipFilesToCache(mSelectedItems,
                             new OnTaskResultListener<List<File>>() {
                                 public void onTaskResult(List<File> result) {
                                     File zipFile = result.get(0);
@@ -128,7 +131,7 @@ public class GalleryActivity extends SherlockActivity {
                     // Sharing multiple files
                     final ArrayList<Uri> uris = new ArrayList<Uri>();
 
-                    Backend.getInstance().downloadActualFiles(mSelectedItems,
+                    Backend.getInstance().downloadActualFilesToCache(mSelectedItems,
                             new OnTaskResultListener<List<File>>() {
                                 public void onTaskResult(List<File> result) {
                                     // Get URIs for the files
@@ -157,7 +160,7 @@ public class GalleryActivity extends SherlockActivity {
                 }
                 else if (mSelectedItems.size() == 1) {
                     // Sharing a single file
-                    Backend.getInstance().downloadActualFiles(mSelectedItems,
+                    Backend.getInstance().downloadActualFilesToCache(mSelectedItems,
                             new OnTaskResultListener<List<File>>() {
                                 public void onTaskResult(List<File> result) {
                                     if (result.get(0) == null) {

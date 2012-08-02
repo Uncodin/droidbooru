@@ -1,6 +1,10 @@
 package in.uncod.android.droidbooru;
 
+import in.uncod.android.droidbooru.net.BooruUploadTask;
+import in.uncod.android.droidbooru.net.FilesDownloadedCallback;
+import in.uncod.android.droidbooru.net.FilesUploadedCallback;
 import in.uncod.android.net.DownloadFilesTask;
+import in.uncod.android.net.IConnectivityStatus;
 import in.uncod.android.util.threading.TaskWithResultListener.OnTaskResultListener;
 import in.uncod.nativ.AbstractNetworkCallbacks;
 import in.uncod.nativ.HttpClientNetwork;
@@ -34,6 +38,10 @@ import android.os.Handler;
 import android.util.Log;
 
 public class Backend {
+    public interface BackendConnectedCallback {
+        void onBackendConnected(boolean mError);
+    }
+
     private class AuthCallback extends AbstractNetworkCallbacks {
         protected boolean mError;
         protected int mErrorCode;
@@ -102,6 +110,14 @@ public class Backend {
         mDatastore.setNetworkHandler(new HttpClientNetwork(mServerNativApiUrl.toString()));
     }
 
+    /**
+     * Authenticates with the nodebooru service if possible
+     * 
+     * @param callback
+     *            If not null, this callback will be activated after the authentication attempt
+     * 
+     * @return true if a network connection was available at the time of the attempt
+     */
     public boolean connect(final BackendConnectedCallback callback) {
         if (!mConnectionChecker.canConnectToNetwork())
             return false;
@@ -202,7 +218,7 @@ public class Backend {
      * @param dialog
      *            An optional progress dialog
      */
-    public void downloadActualFiles(List<BooruFile> files, OnTaskResultListener<List<File>> callback,
+    public void downloadActualFilesToCache(List<BooruFile> files, OnTaskResultListener<List<File>> callback,
             ProgressDialog dialog) {
         URL[] urls = new URL[files.size()];
 
@@ -227,9 +243,9 @@ public class Backend {
      * @param dialog
      *            An optional progress dialog
      */
-    public void downloadAndZipFiles(List<BooruFile> files, final OnTaskResultListener<List<File>> callback,
-            ProgressDialog dialog) {
-        downloadActualFiles(files, new OnTaskResultListener<List<File>>() {
+    public void downloadAndZipFilesToCache(List<BooruFile> files,
+            final OnTaskResultListener<List<File>> callback, ProgressDialog dialog) {
+        downloadActualFilesToCache(files, new OnTaskResultListener<List<File>>() {
             public void onTaskResult(List<File> result) {
                 // Create zip file
                 File zipFile = null;
@@ -283,6 +299,24 @@ public class Backend {
         return urls;
     }
 
+    /**
+     * Upload the given files to a nodebooru service
+     * 
+     * @param files
+     *            An array of Files to upload
+     * @param email
+     *            The email address of the uploading user
+     * @param tags
+     *            The tags to apply to each uploaded file
+     * @param uiHandler
+     *            A Handler instance attached to a UI thread; an async task will be started on this thread
+     * @param callback
+     *            If not null, this callback will be activated after the files are uploaded
+     * @param dialog
+     *            If not null, this dialog will be automatically updated with the upload progress & dismissed
+     * 
+     * @return true if a connection to the network is available at the time of the upload request
+     */
     public boolean uploadFiles(final File[] files, final String email, final String tags,
             final Handler uiHandler, final FilesUploadedCallback callback, final ProgressDialog dialog) {
         if (!mConnectionChecker.canConnectToNetwork())
@@ -292,7 +326,7 @@ public class Backend {
             mDatastore.authenticate("test", "test", new AuthCallback() {
                 public void finished(String extras) {
                     if (!mError) {
-                        internalUploadFiles(files, email, tags, uiHandler, callback, dialog);
+                        doFileUpload(files, email, tags, uiHandler, callback, dialog);
                     }
                     else {
                         callback.onFilesUploaded(true);
@@ -301,20 +335,20 @@ public class Backend {
             });
         }
         else {
-            internalUploadFiles(files, email, tags, uiHandler, callback, dialog);
+            doFileUpload(files, email, tags, uiHandler, callback, dialog);
         }
 
         return true;
     }
 
-    private void internalUploadFiles(final File[] files, final String email, final String tags,
-            Handler uiHandler, final FilesUploadedCallback runWhenFinished, final ProgressDialog dialog) {
+    private void doFileUpload(final File[] files, final String email, final String tags, Handler uiHandler,
+            final FilesUploadedCallback callback, final ProgressDialog dialog) {
         uiHandler.post(new Runnable() {
             public void run() {
                 new BooruUploadTask(mServerFilePostUrl, email, tags, new OnTaskResultListener<Boolean>() {
                     public void onTaskResult(Boolean error) {
-                        if (runWhenFinished != null) {
-                            runWhenFinished.onFilesUploaded(error);
+                        if (callback != null) {
+                            callback.onFilesUploaded(error);
                         }
                     }
                 }, dialog).execute(files);
@@ -322,6 +356,11 @@ public class Backend {
         });
     }
 
+    /**
+     * Gets the default tags applied to every uploaded file
+     * 
+     * @return A comma-delimited list of tags
+     */
     public String getDefaultTags() {
         return "droidbooru," + new SimpleDateFormat("MM-dd-yy").format(Calendar.getInstance().getTime());
     }
