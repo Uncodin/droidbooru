@@ -1,6 +1,7 @@
 package in.uncod.android.droidbooru;
 
 import in.uncod.android.droidbooru.net.FilesUploadedCallback;
+import in.uncod.android.droidbooru.net.NotificationService;
 import in.uncod.android.net.ConnectivityAgent;
 
 import java.io.File;
@@ -69,6 +70,10 @@ public class MainActivity extends SherlockActivity {
                 mPrefs.getString(resources.getString(R.string.pref_selected_server),
                         resources.getString(R.string.dv_pref_selected_server)), new ConnectivityAgent(this));
 
+        // Start notification service
+        Intent service = new Intent(this, NotificationService.class);
+        startService(service);
+
         Intent intent = getIntent();
         if (Intent.ACTION_SEND.equals(intent.getAction())) {
             // Started via Share request
@@ -123,8 +128,7 @@ public class MainActivity extends SherlockActivity {
         }
         else {
             // Need to launch the gallery
-            Intent galleryIntent = new Intent(this, GalleryActivity.class).putExtra(
-                    resources.getString(R.string.pref_account_name), mAccount).setAction(intent.getAction());
+            Intent galleryIntent = new Intent(this, GalleryActivity.class).setAction(intent.getAction());
 
             if (intent.getAction().equals(Intent.ACTION_GET_CONTENT)) {
                 startActivityForResult(galleryIntent, REQ_CODE_GET_FILE);

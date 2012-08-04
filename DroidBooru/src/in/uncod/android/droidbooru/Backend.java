@@ -8,6 +8,7 @@ import in.uncod.android.net.IConnectivityStatus;
 import in.uncod.android.util.threading.TaskWithResultListener.OnTaskResultListener;
 import in.uncod.nativ.AbstractNetworkCallbacks;
 import in.uncod.nativ.HttpClientNetwork;
+import in.uncod.nativ.INetworkCallbacks;
 import in.uncod.nativ.INetworkHandler;
 import in.uncod.nativ.Image;
 import in.uncod.nativ.KeyPredicate;
@@ -366,13 +367,14 @@ public class Backend {
     }
 
     /**
-     * Queries the nodebooru service for files, ordered by uploaded date, descending
+     * Downloads files from the nodebooru service as a list, ordered by uploaded date, descending
      * 
      * @param number
      *            The number of files to retrieve
      * @param offset
      *            The number of files to skip
-     * @return
+     * 
+     * @return true if a connection to the service was available
      */
     public boolean downloadFiles(final int number, final int offset, final Handler uiHandler,
             final ProgressDialog dialog, final FilesDownloadedCallback callback) {
@@ -401,44 +403,79 @@ public class Backend {
         return true;
     }
 
+    /**
+     * Queries the nodebooru service for a list of files, ordered by uploaded date, descending
+     * 
+     * @param number
+     *            The number of files to retrieve
+     * 
+     * @param offset
+     *            The number of files to skip
+     * 
+     * @param callback
+     *            A callback that will be activated when files have been received
+     * 
+     * @return true if a connection to the service was available
+     */
+    public boolean queryExternalFiles(final int number, final int offset, final INetworkCallbacks callback) {
+        if (!mConnectionChecker.canConnectToNetwork())
+            return false;
+
+        if (!mDatastore.hasAuthenticationToken()) {
+            mDatastore.authenticate("test", "test", new AuthCallback() {
+                public void finished(String extras) {
+                    if (!mError) {
+                        mDatastore.externalQueryImage(
+                                KeyPredicate.defaultPredicate().orderBy("uploadedDate", true).limit(number)
+                                        .offset(offset), null, callback);
+                    }
+                }
+            });
+        }
+        else {
+            mDatastore.externalQueryImage(KeyPredicate.defaultPredicate().orderBy("uploadedDate", true)
+                    .limit(number).offset(offset), null, callback);
+        }
+
+        return true;
+    }
+
     private void queryExternalAndDownload(int number, final int offset, final Handler uiHandler,
             final ProgressDialog dialog, final FilesDownloadedCallback callback) {
         Log.d(TAG, "Downloading " + number + " files from offset " + offset);
-        mDatastore.externalQueryImage(
-                KeyPredicate.defaultPredicate().orderBy("uploadedDate", true).limit(number).offset(offset),
-                null, new AbstractNetworkCallbacks() {
-                    @Override
-                    public void onReceivedImage(ORMDatastore ds, String queryName, final Image[] files) {
-                        if (files.length > 0) {
-                            final BooruFile[] bFiles = createBooruFilesForFiles(files);
+        queryExternalFiles(number, offset, new AbstractNetworkCallbacks() {
+            @Override
+            public void onReceivedImage(ORMDatastore ds, String queryName, final Image[] files) {
+                if (files.length > 0) {
+                    final BooruFile[] bFiles = createBooruFilesForFiles(files);
 
-                            uiHandler.post(new Runnable() {
+                    uiHandler.post(new Runnable() {
 
-                                public void run() {
-                                    // Download thumbnails
-                                    new DownloadFilesTask(mDataDirectory, false,
-                                            new OnTaskResultListener<List<File>>() {
-                                                public void onTaskResult(List<File> dFiles) {
-                                                    // Associate the files with each BooruFile
-                                                    int i = 0;
-                                                    for (File file : dFiles) {
-                                                        bFiles[i].setThumbFile(file);
-                                                        i++;
-                                                    }
+                        public void run() {
+                            // Download thumbnails
+                            new DownloadFilesTask(mDataDirectory, false,
+                                    new OnTaskResultListener<List<File>>() {
+                                        public void onTaskResult(List<File> dFiles) {
+                                            // Associate the files with each BooruFile
+                                            int i = 0;
+                                            for (File file : dFiles) {
+                                                bFiles[i].setThumbFile(file);
+                                                i++;
+                                            }
 
-                                                    if (callback != null)
-                                                        callback.onFilesDownloaded(offset, bFiles);
-                                                }
-                                            }, dialog).execute(getThumbUrlsForBooruFiles(bFiles));
-                                }
-                            });
+                                            if (callback != null)
+                                                callback.onFilesDownloaded(offset, bFiles);
+                                        }
+                                    }, dialog).execute(getThumbUrlsForBooruFiles(bFiles));
                         }
-                        else {
-                            if (callback != null)
-                                callback.onFilesDownloaded(offset, new BooruFile[0]);
-                        }
-                    }
-                });
+                    });
+                }
+                else {
+                    if (callback != null)
+                        callback.onFilesDownloaded(offset, new BooruFile[0]);
+                }
+            }
+        });
     }
 
     public BooruFile[] createBooruFilesForFiles(Image[] files) {
