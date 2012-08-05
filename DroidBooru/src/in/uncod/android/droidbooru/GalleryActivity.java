@@ -42,6 +42,7 @@ import com.actionbarsherlock.app.SherlockActivity;
 import com.actionbarsherlock.view.ActionMode;
 import com.actionbarsherlock.view.Menu;
 import com.actionbarsherlock.view.MenuItem.OnMenuItemClickListener;
+import com.actionbarsherlock.view.Window;
 
 public class GalleryActivity extends SherlockActivity {
     private class GalleryActionModeHandler implements ActionMode.Callback {
@@ -240,6 +241,10 @@ public class GalleryActivity extends SherlockActivity {
     }
 
     private class UpdateDisplayedFilesCallback implements FilesDownloadedCallback {
+        public UpdateDisplayedFilesCallback() {
+            setProgressBarIndeterminateVisibility(true); // Show progress indicator
+        }
+
         public void onFilesDownloaded(int offset, BooruFile[] bFiles) {
             if (bFiles.length > 0) {
                 int i = Math.min(mBooruFileAdapter.getCount(), offset);
@@ -254,6 +259,12 @@ public class GalleryActivity extends SherlockActivity {
                     }
                 });
             }
+
+            runOnUiThread(new Runnable() {
+                public void run() {
+                    setProgressBarIndeterminateVisibility(false); // Hide progress indicator
+                }
+            });
         }
     }
 
@@ -290,6 +301,7 @@ public class GalleryActivity extends SherlockActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS); // So we can show progress while downloading
         setContentView(R.layout.activity_gallery);
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
