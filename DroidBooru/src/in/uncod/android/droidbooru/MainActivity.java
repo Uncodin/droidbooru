@@ -133,7 +133,7 @@ public class MainActivity extends SherlockActivity {
             // Need to launch the gallery
             Intent galleryIntent = new Intent(this, GalleryActivity.class).setAction(intent.getAction());
 
-            if (intent.getAction().equals(Intent.ACTION_GET_CONTENT)) {
+            if (Intent.ACTION_GET_CONTENT.equals(intent.getAction())) {
                 startActivityForResult(galleryIntent, REQ_CODE_GET_FILE);
             }
             else {

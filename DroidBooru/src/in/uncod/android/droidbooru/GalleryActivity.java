@@ -196,7 +196,8 @@ public class GalleryActivity extends SherlockActivity {
             // Share option
             com.actionbarsherlock.view.MenuItem shareMenu = menu.add(R.string.share);
 
-            if (getIntent().getAction().equals(Intent.ACTION_GET_CONTENT)) {
+            String action = getIntent().getAction();
+            if (action != null && action.equals(Intent.ACTION_GET_CONTENT)) {
                 // User is in the process of selecting file(s) for another application
                 shareMenu.setOnMenuItemClickListener(new GetFilesContentClickListener());
             }
@@ -216,7 +217,8 @@ public class GalleryActivity extends SherlockActivity {
             mActionMode = null;
             mSelectedItems.clear();
 
-            if (getIntent().getAction().equals(Intent.ACTION_GET_CONTENT)) {
+            String action = getIntent().getAction();
+            if (action != null && action.equals(Intent.ACTION_GET_CONTENT)) {
                 // User was picking content for another app
                 setResult(RESULT_CANCELED);
                 finish();
