@@ -2,9 +2,14 @@ package in.uncod.android.droidbooru;
 
 import in.uncod.android.droidbooru.net.FilesUploadedCallback;
 import in.uncod.android.droidbooru.net.NotificationService;
+import in.uncod.android.util.threading.TaskWithResultListener.OnTaskResultListener;
 
 import java.io.File;
+import java.net.MalformedURLException;
 import java.util.ArrayList;
+import java.util.List;
+
+import org.apache.http.HttpHost;
 
 import android.accounts.Account;
 import android.accounts.AccountManager;
@@ -71,23 +76,41 @@ public class MainActivity extends SherlockActivity {
             // Started via Share request
             Log.d(TAG, "Received single file upload request");
 
-            // Uploading a single file
-            Backend.getInstance().uploadFiles(
-                    new File[] { Backend.getInstance().createTempFileForUri(
-                            (Uri) intent.getParcelableExtra(Intent.EXTRA_STREAM), getContentResolver()) },
-                    mAccount.name, Backend.getInstance().getDefaultTags(), mUiHandler,
-                    new FilesUploadedCallback() {
-                        public void onFilesUploaded(boolean error) {
-                            if (error) {
-                                setResult(RESULT_CANCELED);
-                            }
-                            else {
-                                setResult(RESULT_OK);
-                            }
+            Uri shareUri = (Uri) intent.getParcelableExtra(Intent.EXTRA_STREAM);
+            if (shareUri == null) {
+                // No direct file URI; see if there's a URI in the text extra
+                shareUri = Uri.parse(intent.getStringExtra(Intent.EXTRA_TEXT));
+            }
 
-                            finish();
-                        }
-                    }, GalleryActivity.createUploadingProgressDialog(MainActivity.this));
+            Log.d(TAG, "Shared URI is " + shareUri);
+
+            if (shareUri.getScheme().equals(HttpHost.DEFAULT_SCHEME_NAME)) {
+                // URI is HTTP link to file; download it first
+                try {
+                    Backend.getInstance().downloadTempFileFromHttp(shareUri,
+                            new OnTaskResultListener<List<File>>() {
+                                public void onTaskResult(List<File> result) {
+                                    if (result.size() > 0) {
+                                        uploadSingleFile(Uri.fromFile(result.get(0)));
+                                    }
+                                    else {
+                                        setResult(RESULT_CANCELED);
+                                        finish();
+                                    }
+                                }
+                            }, GalleryActivity.createDownloadingProgressDialog(this));
+                }
+                catch (MalformedURLException e) {
+                    e.printStackTrace();
+
+                    setResult(RESULT_CANCELED);
+                    finish();
+                }
+            }
+            else {
+                // Uploading a single file
+                uploadSingleFile(shareUri);
+            }
         }
         else if (Intent.ACTION_SEND_MULTIPLE.equals(intent.getAction())) {
             // Started via Share request
@@ -104,19 +127,7 @@ public class MainActivity extends SherlockActivity {
                 i++;
             }
 
-            Backend.getInstance().uploadFiles(files, mAccount.name, Backend.getInstance().getDefaultTags(),
-                    mUiHandler, new FilesUploadedCallback() {
-                        public void onFilesUploaded(boolean error) {
-                            if (error) {
-                                setResult(RESULT_CANCELED);
-                            }
-                            else {
-                                setResult(RESULT_OK);
-                            }
-
-                            finish();
-                        }
-                    }, GalleryActivity.createUploadingProgressDialog(MainActivity.this));
+            uploadMultipleFiles(files);
         }
         else {
             // Need to launch the gallery
@@ -130,6 +141,40 @@ public class MainActivity extends SherlockActivity {
                 finish();
             }
         }
+    }
+
+    private void uploadMultipleFiles(File[] files) {
+        Backend.getInstance().uploadFiles(files, mAccount.name, Backend.getInstance().getDefaultTags(),
+                mUiHandler, new FilesUploadedCallback() {
+                    public void onFilesUploaded(boolean error) {
+                        if (error) {
+                            setResult(RESULT_CANCELED);
+                        }
+                        else {
+                            setResult(RESULT_OK);
+                        }
+
+                        finish();
+                    }
+                }, GalleryActivity.createUploadingProgressDialog(MainActivity.this));
+    }
+
+    private void uploadSingleFile(Uri fileUri) {
+        Backend.getInstance().uploadFiles(
+                new File[] { Backend.getInstance().createTempFileForUri(fileUri, getContentResolver()) },
+                mAccount.name, Backend.getInstance().getDefaultTags(), mUiHandler,
+                new FilesUploadedCallback() {
+                    public void onFilesUploaded(boolean error) {
+                        if (error) {
+                            setResult(RESULT_CANCELED);
+                        }
+                        else {
+                            setResult(RESULT_OK);
+                        }
+
+                        finish();
+                    }
+                }, GalleryActivity.createUploadingProgressDialog(MainActivity.this));
     }
 
     private void getAndStoreAccount(Resources resources) {

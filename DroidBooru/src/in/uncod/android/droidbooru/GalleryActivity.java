@@ -66,7 +66,7 @@ public class GalleryActivity extends SherlockActivity {
 
                                     finish();
                                 }
-                            }, createDownloadingProgressDialog());
+                            }, createDownloadingProgressDialog(GalleryActivity.this));
                 }
                 else if (mSelectedItems.size() > 0) {
                     try {
@@ -89,7 +89,7 @@ public class GalleryActivity extends SherlockActivity {
                                         finish();
                                     }
 
-                                }, createDownloadingProgressDialog());
+                                }, createDownloadingProgressDialog(GalleryActivity.this));
                     }
                     catch (MalformedURLException e) {
                         e.printStackTrace();
@@ -159,7 +159,7 @@ public class GalleryActivity extends SherlockActivity {
                                                     getResources().getString(R.string.share_files_with)),
                                             REQ_CODE_CHOOSE_SHARING_APP);
                                 }
-                            }, createDownloadingProgressDialog());
+                            }, createDownloadingProgressDialog(GalleryActivity.this));
                 }
                 else if (mSelectedItems.size() == 1) {
                     // Sharing a single file
@@ -182,7 +182,7 @@ public class GalleryActivity extends SherlockActivity {
                                                     getResources().getString(R.string.share_files_with)),
                                             REQ_CODE_CHOOSE_SHARING_APP);
                                 }
-                            }, createDownloadingProgressDialog());
+                            }, createDownloadingProgressDialog(GalleryActivity.this));
                 }
 
                 return true;
@@ -323,7 +323,8 @@ public class GalleryActivity extends SherlockActivity {
                     runOnUiThread(new Runnable() {
                         public void run() {
                             mBackend.downloadFiles(NUM_FILES_INITIAL_DOWNLOAD, 0, mUiHandler,
-                                    createDownloadingProgressDialog(), new UpdateDisplayedFilesCallback());
+                                    createDownloadingProgressDialog(GalleryActivity.this),
+                                    new UpdateDisplayedFilesCallback());
                         }
                     });
                 }
@@ -363,7 +364,8 @@ public class GalleryActivity extends SherlockActivity {
                         mDownloadWhileScrolling = true;
 
                         Backend.getInstance().downloadFiles(NUM_FILES_INITIAL_DOWNLOAD, 0, mUiHandler,
-                                createDownloadingProgressDialog(), new UpdateDisplayedFilesCallback());
+                                createDownloadingProgressDialog(GalleryActivity.this),
+                                new UpdateDisplayedFilesCallback());
 
                         return true;
                     }
@@ -435,8 +437,11 @@ public class GalleryActivity extends SherlockActivity {
                                         public void run() {
                                             if (!error) {
                                                 // Download and display the image that was just uploaded
-                                                mBackend.downloadFiles(1, 0, mUiHandler,
-                                                        createDownloadingProgressDialog(),
+                                                mBackend.downloadFiles(
+                                                        1,
+                                                        0,
+                                                        mUiHandler,
+                                                        createDownloadingProgressDialog(GalleryActivity.this),
                                                         new UpdateDisplayedFilesCallback());
                                             }
                                             else {
@@ -543,8 +548,8 @@ public class GalleryActivity extends SherlockActivity {
                 REQ_CODE_CHOOSE_FILE_UPLOAD);
     }
 
-    private ProgressDialog createDownloadingProgressDialog() {
-        ProgressDialog dialog = new ProgressDialog(GalleryActivity.this);
+    public static ProgressDialog createDownloadingProgressDialog(Context context) {
+        ProgressDialog dialog = new ProgressDialog(context);
         dialog.setTitle(R.string.downloading);
         dialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
         dialog.setCancelable(false);
