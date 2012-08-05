@@ -2,7 +2,6 @@ package in.uncod.android.droidbooru;
 
 import in.uncod.android.droidbooru.net.FilesUploadedCallback;
 import in.uncod.android.droidbooru.net.NotificationService;
-import in.uncod.android.net.ConnectivityAgent;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -62,13 +61,6 @@ public class MainActivity extends SherlockActivity {
         mPrefs = PreferenceManager.getDefaultSharedPreferences(this);
 
         getAndStoreAccount(resources);
-
-        // Initialize backend
-        Backend.init(
-                getExternalFilesDir(null),
-                getExternalCacheDir(),
-                mPrefs.getString(resources.getString(R.string.pref_selected_server),
-                        resources.getString(R.string.dv_pref_selected_server)), new ConnectivityAgent(this));
 
         // Start notification service
         Intent service = new Intent(this, NotificationService.class);

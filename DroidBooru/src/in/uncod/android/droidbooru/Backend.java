@@ -58,7 +58,7 @@ public class Backend {
         }
     }
 
-    private static final String TAG = null;
+    private static final String TAG = "Backend";
 
     private static Backend mInstance;
 

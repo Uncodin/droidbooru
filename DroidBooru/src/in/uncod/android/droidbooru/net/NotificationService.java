@@ -3,6 +3,7 @@ package in.uncod.android.droidbooru.net;
 import in.uncod.android.droidbooru.Backend;
 import in.uncod.android.droidbooru.GalleryActivity;
 import in.uncod.android.droidbooru.R;
+import in.uncod.android.net.ConnectivityAgent;
 import in.uncod.nativ.AbstractNetworkCallbacks;
 import in.uncod.nativ.Image;
 import in.uncod.nativ.ORMDatastore;
@@ -17,7 +18,10 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.res.Resources;
 import android.os.IBinder;
+import android.preference.PreferenceManager;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -39,8 +43,16 @@ public class NotificationService extends Service {
 
     @Override
     public void onCreate() {
-        // Schedule check for new images every N minutes
         if (mTimer == null) {
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+            Resources resources = getResources();
+
+            // Initialize backend
+            Backend.init(getExternalFilesDir(null), getExternalCacheDir(), prefs.getString(
+                    resources.getString(R.string.pref_selected_server),
+                    resources.getString(R.string.dv_pref_selected_server)), new ConnectivityAgent(this));
+
+            // Schedule check for new images every N minutes
             mTimer = new Timer("ImageUpdate", true);
             mTimer.schedule(new TimerTask() {
                 @Override
