@@ -15,13 +15,11 @@ import android.app.ProgressDialog;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
-import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
@@ -306,9 +304,7 @@ public class GalleryActivity extends SherlockActivity {
         requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS); // So we can show progress while downloading
         setContentView(R.layout.activity_gallery);
 
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        mAccount = new Account(prefs.getString(getResources().getString(R.string.pref_account_name), ""),
-                prefs.getString(getResources().getString(R.string.pref_account_type), ""));
+        mAccount = MainActivity.getDroidBooruAccount(this);
 
         mBackend = Backend.getInstance();
         if (!mBackend.connect(new BackendConnectedCallback() {

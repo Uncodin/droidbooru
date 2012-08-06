@@ -13,6 +13,7 @@ import org.apache.http.HttpHost;
 
 import android.accounts.Account;
 import android.accounts.AccountManager;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
@@ -37,7 +38,6 @@ public class MainActivity extends SherlockActivity {
     private static final int REQ_CODE_GET_FILE = 0;
 
     private Account mAccount;
-    private SharedPreferences mPrefs;
 
     private Handler mUiHandler;
 
@@ -61,11 +61,7 @@ public class MainActivity extends SherlockActivity {
 
         mUiHandler = new Handler();
 
-        Resources resources = getResources();
-
-        mPrefs = PreferenceManager.getDefaultSharedPreferences(this);
-
-        getAndStoreAccount(resources);
+        mAccount = getDroidBooruAccount(this);
 
         // Start notification service
         Intent service = new Intent(this, NotificationService.class);
@@ -177,35 +173,40 @@ public class MainActivity extends SherlockActivity {
                 }, GalleryActivity.createUploadingProgressDialog(MainActivity.this));
     }
 
-    private void getAndStoreAccount(Resources resources) {
+    public static Account getDroidBooruAccount(Context context) {
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+        Resources resources = context.getResources();
+        Account retAccount = null;
+
         // Get stored account if we have one
-        String storedAccountName = mPrefs.getString(resources.getString(R.string.pref_account_name), "");
+        String storedAccountName = prefs.getString(resources.getString(R.string.pref_account_name), "");
         if (storedAccountName != "") {
-            mAccount = new Account(storedAccountName, mPrefs.getString(
+            retAccount = new Account(storedAccountName, prefs.getString(
                     resources.getString(R.string.pref_account_type), ""));
         }
         else {
-            Account[] accounts = AccountManager.get(this).getAccounts();
+            Account[] accounts = AccountManager.get(context).getAccounts();
             if (accounts.length > 0) {
                 // TODO Let user pick account
                 for (Account account : accounts) {
                     if (account.name.endsWith("ironclad.mobi")) {
-                        mAccount = account;
+                        retAccount = account;
+                        break;
                     }
                 }
 
-                if (mAccount == null)
-                    mAccount = createDefaultAccount();
+                if (retAccount == null)
+                    retAccount = createDefaultAccount();
 
-                storeAccountInPrefs(mAccount, resources);
+                storeAccountInPrefs(retAccount, prefs, resources);
             }
             else {
                 // Proceed with a default account
-                mAccount = createDefaultAccount();
+                retAccount = createDefaultAccount();
             }
         }
 
-        Log.d(TAG, "Using account " + mAccount.name);
+        return retAccount;
     }
 
     @Override
@@ -220,8 +221,8 @@ public class MainActivity extends SherlockActivity {
         }
     }
 
-    private void storeAccountInPrefs(Account account, Resources resources) {
-        Editor editor = mPrefs.edit();
+    private static void storeAccountInPrefs(Account account, SharedPreferences prefs, Resources resources) {
+        Editor editor = prefs.edit();
 
         editor.putString(resources.getString(R.string.pref_account_name), account.name);
         editor.putString(resources.getString(R.string.pref_account_type), account.type);
@@ -229,7 +230,7 @@ public class MainActivity extends SherlockActivity {
         editor.commit();
     }
 
-    private Account createDefaultAccount() {
+    private static Account createDefaultAccount() {
         return new Account("droidbooru@ironclad.mobi", "Google");
     }
 }
