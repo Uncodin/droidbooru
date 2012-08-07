@@ -17,7 +17,7 @@ public class BooruFile {
     private Image mImage;
     private URL mThumbUrl;
     private URL mActualUrl;
-    private File mFile;
+    private File mThumbFile;
 
     private BooruFile(ORMDatastore datastore, Image file, URL thumbUrl, URL actualUrl) {
         mDatastore = datastore;
@@ -112,25 +112,31 @@ public class BooruFile {
         return mImage.getMime();
     }
 
-    public String getThumbPath() {
-        String filePath;
+    public File getThumbPath() {
+        File filePath;
 
         if (getThumbFile() != null && getThumbFile().exists()) {
-            filePath = getThumbFile().getAbsolutePath();
+            filePath = getThumbFile();
         }
         else {
-            filePath = mDatastore.getDownloadPathPrefix() + "temp_thumb.jpg";
+            // File doesn't exist, try the default thumbnail image
+            filePath = new File(mDatastore.getDownloadPathPrefix(), "temp_thumb.jpg");
+
+            if (!filePath.exists()) {
+                // No luck; return null
+                filePath = null;
+            }
         }
 
         return filePath;
     }
 
     public void setThumbFile(File file) {
-        mFile = file;
+        mThumbFile = file;
     }
 
     public File getThumbFile() {
-        return mFile;
+        return mThumbFile;
     }
 
     public String getFilehash() {

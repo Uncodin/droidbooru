@@ -3,6 +3,7 @@ package in.uncod.android.droidbooru;
 import in.uncod.android.droidbooru.Backend.BackendConnectedCallback;
 import in.uncod.android.droidbooru.net.FilesDownloadedCallback;
 import in.uncod.android.droidbooru.net.FilesUploadedCallback;
+import in.uncod.android.graphics.BitmapManager;
 import in.uncod.android.util.threading.TaskWithResultListener.OnTaskResultListener;
 
 import java.io.File;
@@ -15,7 +16,6 @@ import android.app.ProgressDialog;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -373,8 +373,6 @@ public class GalleryActivity extends SherlockActivity {
     }
 
     private View displayThumbInView(View convertView, BooruFile booruFile) {
-        String filePath = booruFile.getThumbPath();
-
         FrameLayout layout;
 
         // Determine if we can reuse the view
@@ -387,8 +385,14 @@ public class GalleryActivity extends SherlockActivity {
 
         ImageView image = (ImageView) layout.findViewById(R.id.thumbnail_image);
 
+        image.setImageBitmap(null);
+
         // Load image
-        image.setImageBitmap(BitmapFactory.decodeFile(filePath));
+        File imageFile = booruFile.getThumbPath();
+        if (imageFile != null) {
+            BitmapManager.getBitmapManager(this).displayBitmapScaled(imageFile.getAbsolutePath(), this,
+                    image, -1);
+        }
 
         return layout;
     }
