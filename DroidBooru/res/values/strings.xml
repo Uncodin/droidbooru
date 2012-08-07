@@ -24,7 +24,9 @@
     <string name="share_link">Share link(s)</string>
     <string name="share_links_with">Share link(s) using</string>
     <string name="upload_file_from">Upload file from</string>
-    <string name="new_image_notification">New images have been uploaded</string>
+    <string name="new_file_notification_status_bar">New files have been uploaded to %s</string>
     <string name="notification_service_started">DroidBooru notification service started</string>
+    <string name="new_file_notification_title">New files available</string>
+    <string name="new_file_notification_body">%s</string>
 
 </resources>
