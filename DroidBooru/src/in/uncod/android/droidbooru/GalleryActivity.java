@@ -25,6 +25,7 @@ import android.view.LayoutInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.AnimationUtils;
 import android.widget.AbsListView;
 import android.widget.AbsListView.OnScrollListener;
 import android.widget.AdapterView;
@@ -252,12 +253,6 @@ public class GalleryActivity extends SherlockActivity {
                     mBooruFileAdapter.insert(file, i); // addAll() is API level 11
                     i++;
                 }
-
-                runOnUiThread(new Runnable() {
-                    public void run() {
-                        mBooruFileAdapter.notifyDataSetChanged();
-                    }
-                });
             }
 
             runOnUiThread(new Runnable() {
@@ -383,7 +378,7 @@ public class GalleryActivity extends SherlockActivity {
             layout = (FrameLayout) convertView;
         }
 
-        ImageView image = (ImageView) layout.findViewById(R.id.thumbnail_image);
+        final ImageView image = (ImageView) layout.findViewById(R.id.thumbnail_image);
 
         image.setImageBitmap(null);
 
@@ -391,7 +386,12 @@ public class GalleryActivity extends SherlockActivity {
         File imageFile = booruFile.getThumbPath();
         if (imageFile != null) {
             BitmapManager.getBitmapManager(this).displayBitmapScaled(imageFile.getAbsolutePath(), this,
-                    image, -1);
+                    image, -1, new Runnable() {
+                        public void run() {
+                            image.startAnimation(AnimationUtils.loadAnimation(GalleryActivity.this,
+                                    R.anim.fadein));
+                        }
+                    });
         }
 
         return layout;
