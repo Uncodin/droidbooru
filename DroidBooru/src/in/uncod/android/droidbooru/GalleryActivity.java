@@ -278,7 +278,7 @@ public class GalleryActivity extends SherlockActivity {
     /**
      * The number of files to populate the gallery with on the initial request
      */
-    protected static final int NUM_FILES_INITIAL_DOWNLOAD = 15;
+    protected static final int NUM_FILES_INITIAL_DOWNLOAD = 20;
 
     private Backend mBackend;
 
@@ -515,8 +515,9 @@ public class GalleryActivity extends SherlockActivity {
 
             public void onScroll(AbsListView view, int firstVisibleItem, int visibleItemCount,
                     int totalItemCount) {
-                if (mDownloadWhileScrolling && totalItemCount > 0
-                        && totalItemCount - (firstVisibleItem + visibleItemCount) <= visibleItemCount * 3) {
+                if (mDownloadWhileScrolling
+                        && totalItemCount > 0
+                        && totalItemCount - (firstVisibleItem + visibleItemCount) <= NUM_FILES_INITIAL_DOWNLOAD) {
                     mDownloadWhileScrolling = false;
 
                     // User only has three pages of items left to scroll through; load more
