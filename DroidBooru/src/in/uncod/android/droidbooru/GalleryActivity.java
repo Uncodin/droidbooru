@@ -455,6 +455,9 @@ public class GalleryActivity extends SherlockActivity {
                                 }
                             }, createUploadingProgressDialog(GalleryActivity.this));
                 }
+                else {
+                    Toast.makeText(GalleryActivity.this, R.string.upload_failed, Toast.LENGTH_LONG).show();
+                }
             };
         }.execute((Void) null);
     }
