@@ -4,6 +4,7 @@ import in.uncod.android.droidbooru.Backend.BackendConnectedCallback;
 import in.uncod.android.droidbooru.net.FilesDownloadedCallback;
 import in.uncod.android.droidbooru.net.FilesUploadedCallback;
 import in.uncod.android.graphics.BitmapManager;
+import in.uncod.android.graphics.BitmapManager.OnBitmapLoadedListener;
 import in.uncod.android.util.threading.TaskWithResultListener.OnTaskResultListener;
 
 import java.io.File;
@@ -380,16 +381,30 @@ public class GalleryActivity extends SherlockActivity {
 
         final ImageView image = (ImageView) layout.findViewById(R.id.thumbnail_image);
 
-        image.setImageBitmap(null);
-
         // Load image
         File imageFile = booruFile.getThumbPath();
         if (imageFile != null) {
             BitmapManager.getBitmapManager(this).displayBitmapScaled(imageFile.getAbsolutePath(), this,
-                    image, -1, new Runnable() {
-                        public void run() {
-                            image.startAnimation(AnimationUtils.loadAnimation(GalleryActivity.this,
-                                    R.anim.fadein));
+                    image, -1, new OnBitmapLoadedListener() {
+                        public void beforeImageLoaded(boolean cached) {
+                            if (!cached) {
+                                runOnUiThread(new Runnable() {
+                                    public void run() {
+                                        image.setImageBitmap(null);
+                                    }
+                                });
+                            }
+                        }
+
+                        public void onImageLoaded(boolean cached) {
+                            if (!cached) {
+                                runOnUiThread(new Runnable() {
+                                    public void run() {
+                                        image.startAnimation(AnimationUtils.loadAnimation(
+                                                GalleryActivity.this, R.anim.fadein));
+                                    }
+                                });
+                            }
                         }
                     });
         }
