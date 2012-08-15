@@ -294,11 +294,15 @@ public class GalleryActivity extends SherlockActivity {
     private ActionMode mActionMode;
     private List<BooruFile> mSelectedItems = new ArrayList<BooruFile>();
 
+    private BitmapManager mBitmapManager;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS); // So we can show progress while downloading
         setContentView(R.layout.activity_gallery);
+
+        mBitmapManager = BitmapManager.get(this, .5);
 
         mAccount = MainActivity.getDroidBooruAccount(this);
 
@@ -384,8 +388,8 @@ public class GalleryActivity extends SherlockActivity {
         // Load image
         File imageFile = booruFile.getThumbPath();
         if (imageFile != null) {
-            BitmapManager.getBitmapManager(this).displayBitmapScaled(imageFile.getAbsolutePath(), this,
-                    image, -1, new OnBitmapLoadedListener() {
+            mBitmapManager.displayBitmapScaled(imageFile.getAbsolutePath(), this, image, -1,
+                    new OnBitmapLoadedListener() {
                         public void beforeImageLoaded(boolean cached) {
                             if (!cached) {
                                 runOnUiThread(new Runnable() {
