@@ -23,7 +23,6 @@ import android.content.res.Resources;
 import android.os.IBinder;
 import android.preference.PreferenceManager;
 import android.util.Log;
-import android.widget.Toast;
 
 public class NotificationService extends Service {
     /**
@@ -98,9 +97,6 @@ public class NotificationService extends Service {
                     });
                 }
             }, Calendar.getInstance().getTime(), IMAGE_CHECK_INTERVAL_MILLIS);
-
-            Toast.makeText(getApplicationContext(), R.string.notification_service_started, Toast.LENGTH_SHORT)
-                    .show();
         }
     }
 
