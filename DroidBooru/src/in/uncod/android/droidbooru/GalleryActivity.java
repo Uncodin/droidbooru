@@ -303,6 +303,8 @@ public class GalleryActivity extends SherlockActivity {
         requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS); // So we can show progress while downloading
         setContentView(R.layout.activity_gallery);
 
+        mUiHandler = new Handler();
+
         mBitmapManager = BitmapManager.get(this, .5);
 
         mAccount = MainActivity.getDroidBooruAccount(this);
@@ -334,8 +336,6 @@ public class GalleryActivity extends SherlockActivity {
         }
 
         initializeUI();
-
-        mUiHandler = new Handler();
 
         String action = getIntent().getAction();
         if (action != null && action.equals(Intent.ACTION_GET_CONTENT)) {

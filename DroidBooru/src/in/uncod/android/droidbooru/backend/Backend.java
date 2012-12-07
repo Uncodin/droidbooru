@@ -28,6 +28,7 @@ import org.apache.http.HttpHost;
 
 import android.app.ProgressDialog;
 import android.content.ContentResolver;
+import android.content.Context;
 import android.net.Uri;
 import android.os.Handler;
 import android.util.Log;
@@ -48,9 +49,15 @@ public abstract class Backend {
     protected URI mServerThumbRequestUrl;
     protected IConnectivityStatus mConnectionChecker;
 
-    public static Backend init(File dataDirectory, File cacheDirectory, String serverAddress,
+    public static Backend init(Context ctx, File dataDirectory, File cacheDirectory, String serverAddress,
             IConnectivityStatus connectionChecker) {
-        mInstance = new NativBackend(dataDirectory, cacheDirectory, serverAddress, connectionChecker);
+        // Determine which Backend we need
+        if (ctx.getPackageManager().hasSystemFeature("com.google.android.tv")) {
+            mInstance = new SimpleHTTPBackend(dataDirectory, cacheDirectory, serverAddress, connectionChecker);
+        }
+        else {
+            mInstance = new NativBackend(dataDirectory, cacheDirectory, serverAddress, connectionChecker);
+        }
 
         return mInstance;
     }

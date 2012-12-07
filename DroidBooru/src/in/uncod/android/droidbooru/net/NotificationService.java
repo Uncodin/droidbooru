@@ -18,6 +18,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.os.IBinder;
+import android.os.Looper;
 import android.preference.PreferenceManager;
 import android.util.Log;
 
@@ -40,6 +41,8 @@ public class NotificationService extends Service {
     private String mNewestFile;
     private Timer mTimer;
     private String mServerName;
+
+    protected boolean mLooped;
 
     @Override
     public void onCreate() {
@@ -66,7 +69,7 @@ public class NotificationService extends Service {
             }
 
             // Initialize backend
-            Backend.init(getExternalFilesDir(null), getExternalCacheDir(), selectedServerAddress,
+            Backend.init(this, getExternalFilesDir(null), getExternalCacheDir(), selectedServerAddress,
                     new ConnectivityAgent(this));
 
             // Schedule check for new files every N minutes
@@ -76,8 +79,13 @@ public class NotificationService extends Service {
                 public void run() {
                     Log.d(TAG, "Checking for new images...");
 
-                    Backend.getInstance().queryExternalFiles(1, 0, new FilesDownloadedCallback() {
+                    if (!mLooped) {
+                        Looper.prepare();
 
+                        mLooped = true;
+                    }
+
+                    Backend.getInstance().queryExternalFiles(1, 0, new FilesDownloadedCallback() {
                         public void onFilesDownloaded(int offset, BooruFile[] files) {
                             if (files.length > 0) {
                                 if (mNewestFile == null) {
