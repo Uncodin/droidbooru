@@ -1,5 +1,6 @@
 package in.uncod.android.droidbooru;
 
+import in.uncod.android.droidbooru.backend.Backend;
 import in.uncod.android.droidbooru.net.FilesUploadedCallback;
 import in.uncod.android.droidbooru.net.NotificationService;
 import in.uncod.android.util.threading.TaskWithResultListener.OnTaskResultListener;

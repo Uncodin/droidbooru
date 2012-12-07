@@ -1,13 +1,10 @@
 package in.uncod.android.droidbooru.net;
 
-import in.uncod.android.droidbooru.Backend;
+import in.uncod.android.droidbooru.BooruFile;
 import in.uncod.android.droidbooru.GalleryActivity;
 import in.uncod.android.droidbooru.R;
+import in.uncod.android.droidbooru.backend.Backend;
 import in.uncod.android.net.ConnectivityAgent;
-import in.uncod.nativ.AbstractNetworkCallbacks;
-import in.uncod.nativ.Image;
-import in.uncod.nativ.ORMDatastore;
-import in.uncod.nativ.ORMGuid;
 
 import java.util.Calendar;
 import java.util.Timer;
@@ -37,7 +34,10 @@ public class NotificationService extends Service {
 
     protected static final String TAG = "NotificationService";
 
-    private ORMGuid mNewestImage;
+    /**
+     * String representation of file GUID
+     */
+    private String mNewestFile;
     private Timer mTimer;
     private String mServerName;
 
@@ -76,18 +76,18 @@ public class NotificationService extends Service {
                 public void run() {
                     Log.d(TAG, "Checking for new images...");
 
-                    Backend.getInstance().queryExternalFiles(1, 0, new AbstractNetworkCallbacks() {
-                        @Override
-                        public void onReceivedImage(ORMDatastore ds, String queryName, Image[] files) {
+                    Backend.getInstance().queryExternalFiles(1, 0, new FilesDownloadedCallback() {
+
+                        public void onFilesDownloaded(int offset, BooruFile[] files) {
                             if (files.length > 0) {
-                                if (mNewestImage == null) {
+                                if (mNewestFile == null) {
                                     // First run; save newest file
-                                    mNewestImage = files[0].getPid();
+                                    mNewestFile = files[0].getUniqueId();
                                 }
                                 else {
-                                    if (!mNewestImage.equals(files[0].getPid())) {
+                                    if (!mNewestFile.equals(files[0].getUniqueId())) {
                                         // Save newest file and send notification
-                                        mNewestImage = files[0].getPid();
+                                        mNewestFile = files[0].getUniqueId();
 
                                         showNotification();
                                     }

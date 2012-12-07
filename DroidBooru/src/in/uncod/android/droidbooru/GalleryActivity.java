@@ -1,6 +1,7 @@
 package in.uncod.android.droidbooru;
 
-import in.uncod.android.droidbooru.Backend.BackendConnectedCallback;
+import in.uncod.android.droidbooru.backend.Backend;
+import in.uncod.android.droidbooru.backend.Backend.BackendConnectedCallback;
 import in.uncod.android.droidbooru.net.FilesDownloadedCallback;
 import in.uncod.android.droidbooru.net.FilesUploadedCallback;
 import in.uncod.android.graphics.BitmapManager;
