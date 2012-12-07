@@ -1,13 +1,10 @@
 package in.uncod.android.droidbooru.net;
 
-import in.uncod.android.droidbooru.Backend;
+import in.uncod.android.droidbooru.BooruFile;
 import in.uncod.android.droidbooru.GalleryActivity;
 import in.uncod.android.droidbooru.R;
+import in.uncod.android.droidbooru.backend.Backend;
 import in.uncod.android.net.ConnectivityAgent;
-import in.uncod.nativ.AbstractNetworkCallbacks;
-import in.uncod.nativ.Image;
-import in.uncod.nativ.ORMDatastore;
-import in.uncod.nativ.ORMGuid;
 
 import java.util.Calendar;
 import java.util.Timer;
@@ -21,9 +18,9 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.Resources;
 import android.os.IBinder;
+import android.os.Looper;
 import android.preference.PreferenceManager;
 import android.util.Log;
-import android.widget.Toast;
 
 public class NotificationService extends Service {
     /**
@@ -38,9 +35,14 @@ public class NotificationService extends Service {
 
     protected static final String TAG = "NotificationService";
 
-    private ORMGuid mNewestImage;
+    /**
+     * String representation of file GUID
+     */
+    private String mNewestFile;
     private Timer mTimer;
     private String mServerName;
+
+    protected boolean mLooped;
 
     @Override
     public void onCreate() {
@@ -67,7 +69,7 @@ public class NotificationService extends Service {
             }
 
             // Initialize backend
-            Backend.init(getExternalFilesDir(null), getExternalCacheDir(), selectedServerAddress,
+            Backend.init(this, getExternalFilesDir(null), getExternalCacheDir(), selectedServerAddress,
                     new ConnectivityAgent(this));
 
             // Schedule check for new files every N minutes
@@ -77,18 +79,23 @@ public class NotificationService extends Service {
                 public void run() {
                     Log.d(TAG, "Checking for new images...");
 
-                    Backend.getInstance().queryExternalFiles(1, 0, new AbstractNetworkCallbacks() {
-                        @Override
-                        public void onReceivedImage(ORMDatastore ds, String queryName, Image[] files) {
+                    if (!mLooped) {
+                        Looper.prepare();
+
+                        mLooped = true;
+                    }
+
+                    Backend.getInstance().queryExternalFiles(1, 0, new FilesDownloadedCallback() {
+                        public void onFilesDownloaded(int offset, BooruFile[] files) {
                             if (files.length > 0) {
-                                if (mNewestImage == null) {
+                                if (mNewestFile == null) {
                                     // First run; save newest file
-                                    mNewestImage = files[0].getPid();
+                                    mNewestFile = files[0].getUniqueId();
                                 }
                                 else {
-                                    if (!mNewestImage.equals(files[0].getPid())) {
+                                    if (!mNewestFile.equals(files[0].getUniqueId())) {
                                         // Save newest file and send notification
-                                        mNewestImage = files[0].getPid();
+                                        mNewestFile = files[0].getUniqueId();
 
                                         showNotification();
                                     }
@@ -98,9 +105,6 @@ public class NotificationService extends Service {
                     });
                 }
             }, Calendar.getInstance().getTime(), IMAGE_CHECK_INTERVAL_MILLIS);
-
-            Toast.makeText(getApplicationContext(), R.string.notification_service_started, Toast.LENGTH_SHORT)
-                    .show();
         }
     }
 

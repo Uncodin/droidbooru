@@ -1,5 +1,6 @@
 package in.uncod.android.droidbooru;
 
+import in.uncod.android.droidbooru.backend.Backend;
 import in.uncod.android.droidbooru.net.FilesUploadedCallback;
 import in.uncod.android.droidbooru.net.NotificationService;
 import in.uncod.android.util.threading.TaskWithResultListener.OnTaskResultListener;
@@ -58,6 +59,15 @@ public class MainActivity extends SherlockActivity {
 
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // Workaround for AsyncTask troubles on Google TV
+        // http://stackoverflow.com/a/7818839/1200865
+        try {
+            Class.forName("android.os.AsyncTask");
+        }
+        catch (ClassNotFoundException e1) {
+            e1.printStackTrace();
+        }
 
         mUiHandler = new Handler();
 
