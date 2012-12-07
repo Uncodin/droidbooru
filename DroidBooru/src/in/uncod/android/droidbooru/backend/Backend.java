@@ -1,18 +1,12 @@
-package in.uncod.android.droidbooru;
+package in.uncod.android.droidbooru.backend;
 
+import in.uncod.android.droidbooru.BooruFile;
 import in.uncod.android.droidbooru.net.BooruUploadTask;
 import in.uncod.android.droidbooru.net.FilesDownloadedCallback;
 import in.uncod.android.droidbooru.net.FilesUploadedCallback;
 import in.uncod.android.net.DownloadFilesTask;
 import in.uncod.android.net.IConnectivityStatus;
 import in.uncod.android.util.threading.TaskWithResultListener.OnTaskResultListener;
-import in.uncod.nativ.AbstractNetworkCallbacks;
-import in.uncod.nativ.HttpClientNetwork;
-import in.uncod.nativ.INetworkCallbacks;
-import in.uncod.nativ.INetworkHandler;
-import in.uncod.nativ.Image;
-import in.uncod.nativ.KeyPredicate;
-import in.uncod.nativ.ORMDatastore;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -34,50 +28,36 @@ import org.apache.http.HttpHost;
 
 import android.app.ProgressDialog;
 import android.content.ContentResolver;
+import android.content.Context;
 import android.net.Uri;
 import android.os.Handler;
 import android.util.Log;
 
-public class Backend {
+public abstract class Backend {
     public interface BackendConnectedCallback {
         void onBackendConnected(boolean mError);
     }
 
-    private class AuthCallback extends AbstractNetworkCallbacks {
-        protected boolean mError;
-        protected int mErrorCode;
-        protected String mErrorMessage;
-
-        @Override
-        public void onError(INetworkHandler handler, int errorCode, String message) {
-            super.onError(handler, errorCode, message);
-
-            mError = true;
-            mErrorCode = errorCode;
-            mErrorMessage = message;
-        }
-    }
-
-    private static final String TAG = "Backend";
-
+    protected static String TAG = "Backend";
     private static Backend mInstance;
+    protected File mDataDirectory;
+    protected File mCacheDirectory;
+    protected URI mServerAddress;
+    protected URI mServerApiUrl;
+    protected URI mServerFilePostUrl;
+    protected URI mServerFileRequestUrl;
+    protected URI mServerThumbRequestUrl;
+    protected IConnectivityStatus mConnectionChecker;
 
-    private ORMDatastore mDatastore;
-
-    private File mDataDirectory;
-    private File mCacheDirectory;
-
-    private URI mServerAddress;
-    private URI mServerNativApiUrl;
-    private URI mServerFilePostUrl;
-    private URI mServerFileRequestUrl;
-    private URI mServerThumbRequestUrl;
-
-    private IConnectivityStatus mConnectionChecker;
-
-    public static Backend init(File dataDirectory, File cacheDirectory, String serverAddress,
+    public static Backend init(Context ctx, File dataDirectory, File cacheDirectory, String serverAddress,
             IConnectivityStatus connectionChecker) {
-        mInstance = new Backend(dataDirectory, cacheDirectory, serverAddress, connectionChecker);
+        // Determine which Backend we need
+        if (ctx.getPackageManager().hasSystemFeature("com.google.android.tv")) {
+            mInstance = new SimpleHTTPBackend(dataDirectory, cacheDirectory, serverAddress, connectionChecker);
+        }
+        else {
+            mInstance = new NativBackend(dataDirectory, cacheDirectory, serverAddress, connectionChecker);
+        }
 
         return mInstance;
     }
@@ -89,7 +69,7 @@ public class Backend {
         return mInstance;
     }
 
-    private Backend(File dataDirectory, File cacheDirectory, String serverAddress,
+    Backend(File dataDirectory, File cacheDirectory, String serverAddress,
             IConnectivityStatus connectionChecker) {
         mConnectionChecker = connectionChecker;
 
@@ -101,14 +81,10 @@ public class Backend {
         mCacheDirectory = cacheDirectory;
 
         // Setup various endpoints
-        mServerNativApiUrl = URI.create(mServerAddress + "/v2/api");
+        mServerApiUrl = URI.create(mServerAddress + "/v2/api");
         mServerFilePostUrl = URI.create(mServerAddress + "/upload/curl");
         mServerFileRequestUrl = URI.create(mServerAddress + "/img/");
         mServerThumbRequestUrl = URI.create(mServerAddress + "/thumb/");
-
-        mDatastore = ORMDatastore.create(new File(mCacheDirectory, "droidbooru.db").getAbsolutePath());
-        mDatastore.setDownloadPathPrefix(mDataDirectory.getAbsolutePath() + File.separator);
-        mDatastore.setNetworkHandler(new HttpClientNetwork(mServerNativApiUrl.toString()));
     }
 
     /**
@@ -119,31 +95,7 @@ public class Backend {
      * 
      * @return true if a network connection was available at the time of the attempt
      */
-    public boolean connect(final BackendConnectedCallback callback) {
-        if (!mConnectionChecker.canConnectToNetwork())
-            return false;
-
-        mDatastore.authenticate("test", "test", new AbstractNetworkCallbacks() {
-            private boolean mError;
-
-            @Override
-            public void onError(INetworkHandler handler, int errorCode, String message) {
-                super.onError(handler, errorCode, message);
-
-                mError = true;
-            }
-
-            @Override
-            public void finished(String extras) {
-                super.finished(extras);
-
-                if (callback != null)
-                    callback.onBackendConnected(mError);
-            }
-        });
-
-        return true;
-    }
+    public abstract boolean connect(final BackendConnectedCallback callback);
 
     /**
      * Creates a temporary file containing the contents of the file at the given URI
@@ -288,7 +240,7 @@ public class Backend {
         }, dialog);
     }
 
-    private URL[] getThumbUrlsForBooruFiles(BooruFile[] bFiles) {
+    URL[] getThumbUrlsForBooruFiles(BooruFile[] bFiles) {
         URL[] urls = new URL[bFiles.length];
 
         int i = 0;
@@ -318,31 +270,10 @@ public class Backend {
      * 
      * @return true if a connection to the network is available at the time of the upload request
      */
-    public boolean uploadFiles(final File[] files, final String email, final String tags,
-            final Handler uiHandler, final FilesUploadedCallback callback, final ProgressDialog dialog) {
-        if (!mConnectionChecker.canConnectToNetwork())
-            return false;
+    public abstract boolean uploadFiles(final File[] files, final String email, final String tags,
+            final Handler uiHandler, final FilesUploadedCallback callback, final ProgressDialog dialog);
 
-        if (!mDatastore.hasAuthenticationToken()) {
-            mDatastore.authenticate("test", "test", new AuthCallback() {
-                public void finished(String extras) {
-                    if (!mError) {
-                        doFileUpload(files, email, tags, uiHandler, callback, dialog);
-                    }
-                    else {
-                        callback.onFilesUploaded(true);
-                    }
-                }
-            });
-        }
-        else {
-            doFileUpload(files, email, tags, uiHandler, callback, dialog);
-        }
-
-        return true;
-    }
-
-    private void doFileUpload(final File[] files, final String email, final String tags, Handler uiHandler,
+    void doFileUpload(final File[] files, final String email, final String tags, Handler uiHandler,
             final FilesUploadedCallback callback, final ProgressDialog dialog) {
         uiHandler.post(new Runnable() {
             public void run() {
@@ -376,32 +307,8 @@ public class Backend {
      * 
      * @return true if a connection to the service was available
      */
-    public boolean downloadFiles(final int number, final int offset, final Handler uiHandler,
-            final ProgressDialog dialog, final FilesDownloadedCallback callback) {
-        if (!mConnectionChecker.canConnectToNetwork())
-            return false;
-
-        if (!mDatastore.hasAuthenticationToken()) {
-            mDatastore.authenticate("test", "test", new AuthCallback() {
-                @Override
-                public void finished(String extras) {
-                    super.finished(extras);
-
-                    if (!mError) {
-                        queryExternalAndDownload(number, offset, uiHandler, dialog, callback);
-                    }
-                    else {
-                        callback.onFilesDownloaded(offset, new BooruFile[0]);
-                    }
-                }
-            });
-        }
-        else {
-            queryExternalAndDownload(number, offset, uiHandler, dialog, callback);
-        }
-
-        return true;
-    }
+    public abstract boolean downloadFiles(final int number, final int offset, final Handler uiHandler,
+            final ProgressDialog dialog, final FilesDownloadedCallback callback);
 
     /**
      * Queries the nodebooru service for a list of files, ordered by uploaded date, descending
@@ -417,85 +324,8 @@ public class Backend {
      * 
      * @return true if a connection to the service was available
      */
-    public boolean queryExternalFiles(final int number, final int offset, final INetworkCallbacks callback) {
-        if (!mConnectionChecker.canConnectToNetwork())
-            return false;
-
-        if (!mDatastore.hasAuthenticationToken()) {
-            mDatastore.authenticate("test", "test", new AuthCallback() {
-                public void finished(String extras) {
-                    if (!mError) {
-                        mDatastore.externalQueryImage(
-                                KeyPredicate.defaultPredicate().orderBy("uploadedDate", true).limit(number)
-                                        .offset(offset), null, callback);
-                    }
-                }
-            });
-        }
-        else {
-            mDatastore.externalQueryImage(KeyPredicate.defaultPredicate().orderBy("uploadedDate", true)
-                    .limit(number).offset(offset), null, callback);
-        }
-
-        return true;
-    }
-
-    private void queryExternalAndDownload(int number, final int offset, final Handler uiHandler,
-            final ProgressDialog dialog, final FilesDownloadedCallback callback) {
-        Log.d(TAG, "Downloading " + number + " files from offset " + offset);
-        queryExternalFiles(number, offset, new AbstractNetworkCallbacks() {
-            @Override
-            public void onReceivedImage(ORMDatastore ds, String queryName, final Image[] files) {
-                if (files.length > 0) {
-                    final BooruFile[] bFiles = createBooruFilesForFiles(files);
-
-                    uiHandler.post(new Runnable() {
-
-                        public void run() {
-                            // Download thumbnails
-                            new DownloadFilesTask(mDataDirectory, false,
-                                    new OnTaskResultListener<List<File>>() {
-                                        public void onTaskResult(List<File> dFiles) {
-                                            // Associate the files with each BooruFile
-                                            int i = 0;
-                                            for (File file : dFiles) {
-                                                bFiles[i].setThumbFile(file);
-                                                i++;
-                                            }
-
-                                            if (callback != null)
-                                                callback.onFilesDownloaded(offset, bFiles);
-                                        }
-                                    }, dialog).execute(getThumbUrlsForBooruFiles(bFiles));
-                        }
-                    });
-                }
-                else {
-                    if (callback != null)
-                        callback.onFilesDownloaded(offset, new BooruFile[0]);
-                }
-            }
-        });
-    }
-
-    public BooruFile[] createBooruFilesForFiles(Image[] files) {
-        BooruFile[] bFiles = new BooruFile[files.length];
-
-        try {
-            int i = 0;
-            for (Image file : files) {
-                bFiles[i] = BooruFile.create(mDatastore, file, mServerThumbRequestUrl.toURL(),
-                        mServerFileRequestUrl.toURL());
-
-                i++;
-            }
-        }
-        catch (MalformedURLException e) {
-            Log.e(TAG, "Invalid URL, check the server address");
-        }
-
-        return bFiles;
-    }
+    public abstract boolean queryExternalFiles(final int number, final int offset,
+            final FilesDownloadedCallback callback);
 
     /**
      * Creates a text file containing HTTP links to the given files
@@ -525,4 +355,54 @@ public class Backend {
 
         return file;
     }
+
+    /**
+     * After querying for file locations, starts a background task to download the files to the device
+     * 
+     * @param number
+     *            The number of files to download
+     * @param offset
+     *            The number of files to skip
+     * @param uiHandler
+     *            A Handler on the UI thread
+     * @param dialog
+     *            If not null, this dialog will be shown to report progress
+     * @param callback
+     *            If not null, this callback will be activated after the files are downloaded
+     */
+    protected void queryExternalAndDownload(int number, final int offset, final Handler uiHandler,
+            final ProgressDialog dialog, final FilesDownloadedCallback callback) {
+        Log.d(TAG, "Downloading " + number + " files from offset " + offset);
+        queryExternalFiles(number, offset, new FilesDownloadedCallback() {
+            public void onFilesDownloaded(final int offset, final BooruFile[] files) {
+                if (files.length > 0) {
+                    uiHandler.post(new Runnable() {
+
+                        public void run() {
+                            // Download thumbnails
+                            new DownloadFilesTask(mDataDirectory, false,
+                                    new OnTaskResultListener<List<File>>() {
+                                        public void onTaskResult(List<File> dFiles) {
+                                            // Associate the files with each BooruFile
+                                            int i = 0;
+                                            for (File file : dFiles) {
+                                                files[i].setThumbFile(file);
+                                                i++;
+                                            }
+
+                                            if (callback != null)
+                                                callback.onFilesDownloaded(offset, files);
+                                        }
+                                    }, dialog).execute(getThumbUrlsForBooruFiles(files));
+                        }
+                    });
+                }
+                else {
+                    if (callback != null)
+                        callback.onFilesDownloaded(offset, new BooruFile[0]);
+                }
+            }
+        });
+    }
+
 }
