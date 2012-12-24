@@ -87,7 +87,7 @@ public class NotificationService extends Service {
 
                     Backend.getInstance().queryExternalFiles(1, 0, new FilesDownloadedCallback() {
                         public void onFilesDownloaded(int offset, BooruFile[] files) {
-                            if (files.length > 0) {
+                            if (files != null && files.length > 0) {
                                 if (mNewestFile == null) {
                                     // First run; save newest file
                                     mNewestFile = files[0].getUniqueId();

@@ -30,12 +30,13 @@ import android.app.ProgressDialog;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Handler;
 import android.util.Log;
 
 public abstract class Backend {
     public interface BackendConnectedCallback {
-        void onBackendConnected(boolean mError);
+        void onBackendConnected(boolean error);
     }
 
     protected static String TAG = "Backend";
@@ -52,7 +53,11 @@ public abstract class Backend {
     public static Backend init(Context ctx, File dataDirectory, File cacheDirectory, String serverAddress,
             IConnectivityStatus connectionChecker) {
         // Determine which Backend we need
-        if (ctx.getPackageManager().hasSystemFeature("com.google.android.tv")) {
+        if (Build.DEVICE.contains("limo")) {
+            mInstance = new MODLiveBackend(ctx, dataDirectory, cacheDirectory, serverAddress,
+                    connectionChecker);
+        }
+        else if (ctx.getPackageManager().hasSystemFeature("com.google.android.tv")) {
             mInstance = new SimpleHTTPBackend(dataDirectory, cacheDirectory, serverAddress, connectionChecker);
         }
         else {
@@ -273,7 +278,7 @@ public abstract class Backend {
     public abstract boolean uploadFiles(final File[] files, final String email, final String tags,
             final Handler uiHandler, final FilesUploadedCallback callback, final ProgressDialog dialog);
 
-    void doFileUpload(final File[] files, final String email, final String tags, Handler uiHandler,
+    protected void doFileUpload(final File[] files, final String email, final String tags, Handler uiHandler,
             final FilesUploadedCallback callback, final ProgressDialog dialog) {
         uiHandler.post(new Runnable() {
             public void run() {
