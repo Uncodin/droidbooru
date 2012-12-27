@@ -3,6 +3,7 @@ package in.uncod.android.droidbooru.net;
 import in.uncod.android.util.threading.TaskWithProgressAndListener;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.URI;
 
 import org.apache.http.client.HttpClient;
@@ -54,11 +55,6 @@ public class BooruUploadTask extends TaskWithProgressAndListener<File, Void, Boo
 
     @Override
     protected Boolean doInBackground(File... params) {
-        boolean error = false;
-
-        HttpClient client = new DefaultHttpClient();
-        HttpPost post = new HttpPost(mApiUrl);
-
         // Build the POST request
         MultipartEntity entity = new MultipartEntity();
 
@@ -75,21 +71,39 @@ public class BooruUploadTask extends TaskWithProgressAndListener<File, Void, Boo
             entity.addPart("email", new StringBody(mEmail));
             entity.addPart("tags", new StringBody(mTags));
 
-            post.setEntity(entity);
+            Log.d(TAG, "Sending upload request...");
 
             // Send the request
-            Log.d(TAG, "Sending upload request...");
-            client.execute(post);
+            sendUploadRequest(mApiUrl, entity);
         }
         catch (Exception e) {
             mException = e;
-            error = true;
         }
 
         if (mException != null) {
             mException.printStackTrace();
         }
 
-        return error;
+        return mException != null;
+    }
+
+    /**
+     * Sends an upload request via HTTP POST
+     * 
+     * @param url
+     *            URL to post request
+     * @param entity
+     *            Request data
+     * 
+     * @throws IOException
+     *             Thrown if there is an error sending the request
+     */
+    protected void sendUploadRequest(URI url, MultipartEntity entity) throws IOException {
+        HttpClient client = new DefaultHttpClient();
+        HttpPost post = new HttpPost(url);
+
+        post.setEntity(entity);
+
+        client.execute(post);
     }
 }
