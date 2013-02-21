@@ -10,3 +10,7 @@
 [submodule "Android-Common"]
 	path = Android-Common
 	url = git@github.com:Uncodin/Android-Common.git
+[submodule "NineOldAndroids"]
+	path = NineOldAndroids
+	url = git://github.com/JakeWharton/NineOldAndroids.git
+	ignore = dirty
