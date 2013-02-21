@@ -13,7 +13,6 @@ import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.List;
 
-import android.accounts.Account;
 import android.app.ProgressDialog;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
@@ -286,7 +285,6 @@ public class GalleryActivity extends DroidBooruAccountActivity {
     private GridView mGridView;
     private ArrayAdapter<BooruFile> mBooruFileAdapter;
 
-    private Account mAccount;
     private Intent mLaunchIntent;
     private boolean mDownloadWhileScrolling = true;
 
@@ -313,39 +311,35 @@ public class GalleryActivity extends DroidBooruAccountActivity {
     protected void onStart() {
         super.onStart();
 
-        mAccount = getDroidBooruAccount();
-
-        if (mAccount != null) {
-            mBackend = Backend.getInstance();
-            if (!mBackend.connect(new BackendConnectedCallback() {
-                public void onBackendConnected(boolean error) {
-                    if (error) {
-                        runOnUiThread(new Runnable() {
-                            public void run() {
-                                Toast.makeText(GalleryActivity.this, R.string.could_not_connect,
-                                        Toast.LENGTH_LONG).show();
-                            }
-                        });
-                    }
-                    else {
-                        runOnUiThread(new Runnable() {
-                            public void run() {
-                                mBackend.downloadFiles(NUM_FILES_INITIAL_DOWNLOAD, 0, mUiHandler,
-                                        createDownloadingProgressDialog(GalleryActivity.this),
-                                        new UpdateDisplayedFilesCallback());
-                            }
-                        });
-                    }
+        mBackend = Backend.getInstance();
+        if (!mBackend.connect(new BackendConnectedCallback() {
+            public void onBackendConnected(boolean error) {
+                if (error) {
+                    runOnUiThread(new Runnable() {
+                        public void run() {
+                            Toast.makeText(GalleryActivity.this, R.string.could_not_connect,
+                                    Toast.LENGTH_LONG).show();
+                        }
+                    });
                 }
-            })) {
-                // Not connected to the network
-                Toast.makeText(this, R.string.network_disconnected, Toast.LENGTH_LONG).show();
+                else {
+                    runOnUiThread(new Runnable() {
+                        public void run() {
+                            mBackend.downloadFiles(NUM_FILES_INITIAL_DOWNLOAD, 0, mUiHandler,
+                                    createDownloadingProgressDialog(GalleryActivity.this),
+                                    new UpdateDisplayedFilesCallback());
+                        }
+                    });
+                }
             }
+        })) {
+            // Not connected to the network
+            Toast.makeText(this, R.string.network_disconnected, Toast.LENGTH_LONG).show();
+        }
 
-            String action = getIntent().getAction();
-            if (action != null && action.equals(Intent.ACTION_GET_CONTENT)) {
-                mActionMode = startActionMode(new GalleryActionModeHandler());
-            }
+        String action = getIntent().getAction();
+        if (action != null && action.equals(Intent.ACTION_GET_CONTENT)) {
+            mActionMode = startActionMode(new GalleryActionModeHandler());
         }
     }
 

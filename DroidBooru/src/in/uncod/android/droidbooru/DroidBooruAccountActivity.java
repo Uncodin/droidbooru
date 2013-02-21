@@ -16,11 +16,22 @@ import com.google.android.gms.common.AccountPicker;
 public class DroidBooruAccountActivity extends SherlockActivity {
     public static final int REQ_CODE_CHOOSE_ACCOUNT = 8675309;
 
+    protected Account mAccount;
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+
+        mAccount = getDroidBooruAccount();
+    }
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == REQ_CODE_CHOOSE_ACCOUNT) {
             if (data != null) {
                 storeAccount(data);
+
+                mAccount = getDroidBooruAccount();
             }
             else {
                 // No account selected
@@ -57,7 +68,6 @@ public class DroidBooruAccountActivity extends SherlockActivity {
                         Uri.parse("market://details?id=com.google.android.gms"));
 
                 startActivity(intent);
-                finish();
             }
         }
 
