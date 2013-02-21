@@ -24,7 +24,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
 import android.view.LayoutInflater;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.AnimationUtils;
@@ -39,13 +38,13 @@ import android.widget.GridView;
 import android.widget.ImageView;
 import android.widget.Toast;
 
-import com.actionbarsherlock.app.SherlockActivity;
 import com.actionbarsherlock.view.ActionMode;
 import com.actionbarsherlock.view.Menu;
+import com.actionbarsherlock.view.MenuItem;
 import com.actionbarsherlock.view.MenuItem.OnMenuItemClickListener;
 import com.actionbarsherlock.view.Window;
 
-public class GalleryActivity extends SherlockActivity {
+public class GalleryActivity extends DroidBooruAccountActivity {
     private class GalleryActionModeHandler implements ActionMode.Callback {
         private class GetFilesContentClickListener implements OnMenuItemClickListener {
             public boolean onMenuItemClick(com.actionbarsherlock.view.MenuItem item) {
@@ -307,39 +306,46 @@ public class GalleryActivity extends SherlockActivity {
 
         mBitmapManager = BitmapManager.get(this, .5);
 
-        mAccount = MainActivity.getDroidBooruAccount(this);
-
-        mBackend = Backend.getInstance();
-        if (!mBackend.connect(new BackendConnectedCallback() {
-            public void onBackendConnected(boolean error) {
-                if (error) {
-                    runOnUiThread(new Runnable() {
-                        public void run() {
-                            Toast.makeText(GalleryActivity.this, R.string.could_not_connect,
-                                    Toast.LENGTH_LONG).show();
-                        }
-                    });
-                }
-                else {
-                    runOnUiThread(new Runnable() {
-                        public void run() {
-                            mBackend.downloadFiles(NUM_FILES_INITIAL_DOWNLOAD, 0, mUiHandler,
-                                    createDownloadingProgressDialog(GalleryActivity.this),
-                                    new UpdateDisplayedFilesCallback());
-                        }
-                    });
-                }
-            }
-        })) {
-            // Not connected to the network
-            Toast.makeText(this, R.string.network_disconnected, Toast.LENGTH_LONG).show();
-        }
-
         initializeUI();
+    }
 
-        String action = getIntent().getAction();
-        if (action != null && action.equals(Intent.ACTION_GET_CONTENT)) {
-            mActionMode = startActionMode(new GalleryActionModeHandler());
+    @Override
+    protected void onStart() {
+        super.onStart();
+
+        mAccount = getDroidBooruAccount();
+
+        if (mAccount != null) {
+            mBackend = Backend.getInstance();
+            if (!mBackend.connect(new BackendConnectedCallback() {
+                public void onBackendConnected(boolean error) {
+                    if (error) {
+                        runOnUiThread(new Runnable() {
+                            public void run() {
+                                Toast.makeText(GalleryActivity.this, R.string.could_not_connect,
+                                        Toast.LENGTH_LONG).show();
+                            }
+                        });
+                    }
+                    else {
+                        runOnUiThread(new Runnable() {
+                            public void run() {
+                                mBackend.downloadFiles(NUM_FILES_INITIAL_DOWNLOAD, 0, mUiHandler,
+                                        createDownloadingProgressDialog(GalleryActivity.this),
+                                        new UpdateDisplayedFilesCallback());
+                            }
+                        });
+                    }
+                }
+            })) {
+                // Not connected to the network
+                Toast.makeText(this, R.string.network_disconnected, Toast.LENGTH_LONG).show();
+            }
+
+            String action = getIntent().getAction();
+            if (action != null && action.equals(Intent.ACTION_GET_CONTENT)) {
+                mActionMode = startActionMode(new GalleryActionModeHandler());
+            }
         }
     }
 
@@ -389,7 +395,7 @@ public class GalleryActivity extends SherlockActivity {
         // Load image
         File imageFile = booruFile.getThumbPath();
         if (imageFile != null) {
-            mBitmapManager.displayBitmapScaled(imageFile.getAbsolutePath(), this, image, -1,
+            mBitmapManager.displayBitmapScaled(imageFile.getAbsolutePath(), image, -1,
                     new OnBitmapLoadedListener() {
                         public void beforeImageLoaded(boolean cached) {
                             if (!cached) {
