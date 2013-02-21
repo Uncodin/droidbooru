@@ -2,10 +2,12 @@ package in.uncod.android.droidbooru;
 
 import android.accounts.Account;
 import android.accounts.AccountManager;
+import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 import android.content.res.Resources;
+import android.net.Uri;
 import android.preference.PreferenceManager;
 
 import com.actionbarsherlock.app.SherlockActivity;
@@ -45,7 +47,18 @@ public class DroidBooruAccountActivity extends SherlockActivity {
             // Let user pick account
             Intent intent = AccountPicker.newChooseAccountIntent(null, null, new String[] { "com.google" },
                     false, null, null, null, null);
-            startActivityForResult(intent, REQ_CODE_CHOOSE_ACCOUNT);
+
+            try {
+                startActivityForResult(intent, REQ_CODE_CHOOSE_ACCOUNT);
+            }
+            catch (ActivityNotFoundException e) {
+                // User probably needs the Google Play Services library
+                intent = new Intent(Intent.ACTION_VIEW,
+                        Uri.parse("market://details?id=com.google.android.gms"));
+
+                startActivity(intent);
+                finish();
+            }
         }
 
         return retAccount;
