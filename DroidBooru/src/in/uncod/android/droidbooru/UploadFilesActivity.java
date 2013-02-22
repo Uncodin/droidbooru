@@ -2,7 +2,6 @@ package in.uncod.android.droidbooru;
 
 import in.uncod.android.droidbooru.backend.Backend;
 import in.uncod.android.droidbooru.net.FilesUploadedCallback;
-import in.uncod.android.droidbooru.net.NotificationService;
 import in.uncod.android.util.threading.TaskWithResultListener.OnTaskResultListener;
 
 import java.io.File;
@@ -17,13 +16,9 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
-import android.view.MenuItem;
 
-import com.actionbarsherlock.view.Menu;
-import com.actionbarsherlock.view.MenuItem.OnMenuItemClickListener;
-
-public class MainActivity extends DroidBooruAccountActivity {
-    private static final String TAG = "MainActivity";
+public class UploadFilesActivity extends DroidBooruAccountActivity {
+    private static final String TAG = "ReceiveContentActivity";
 
     /**
      * Request code to get a single file
@@ -33,43 +28,13 @@ public class MainActivity extends DroidBooruAccountActivity {
     private Handler mUiHandler;
 
     @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Login settings
-        menu.add(R.string.settings).setShowAsActionFlags(MenuItem.SHOW_AS_ACTION_NEVER)
-                .setOnMenuItemClickListener(new OnMenuItemClickListener() {
-                    public boolean onMenuItemClick(com.actionbarsherlock.view.MenuItem item) {
-                        startActivity(new Intent(MainActivity.this, LoginSettingsActivity.class));
-
-                        return true;
-                    }
-                });
-
-        return super.onCreateOptionsMenu(menu);
-    }
-
-    public void onCreate(Bundle savedInstanceState) {
+    protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Workaround for AsyncTask troubles on Google TV
-        // http://stackoverflow.com/a/7818839/1200865
-        try {
-            Class.forName("android.os.AsyncTask");
-        }
-        catch (ClassNotFoundException e1) {
-            e1.printStackTrace();
-        }
-
         mUiHandler = new Handler();
-
-        // Start notification service
-        Intent service = new Intent(this, NotificationService.class);
-        startService(service);
     }
 
-    @Override
-    protected void onStart() {
-        super.onStart();
-
+    protected void onAccountLoaded() {
         Intent intent = getIntent();
         if (Intent.ACTION_SEND.equals(intent.getAction())) {
             // Started via Share request
@@ -86,7 +51,7 @@ public class MainActivity extends DroidBooruAccountActivity {
             if (shareUri.getScheme().equals(HttpHost.DEFAULT_SCHEME_NAME)) {
                 // URI is HTTP link to file; download it first
                 try {
-                    Backend.getInstance().downloadTempFileFromHttp(shareUri,
+                    Backend.getInstance(this).downloadTempFileFromHttp(shareUri,
                             new OnTaskResultListener<List<File>>() {
                                 public void onTaskResult(List<File> result) {
                                     if (result.size() > 0) {
@@ -121,30 +86,18 @@ public class MainActivity extends DroidBooruAccountActivity {
 
             int i = 0;
             for (Uri uri : fileUris) {
-                files[i] = Backend.getInstance().createTempFileForUri(uri, getContentResolver());
+                files[i] = Backend.getInstance(this).createTempFileForUri(uri, getContentResolver());
 
                 i++;
             }
 
             uploadMultipleFiles(files);
         }
-        else {
-            // Need to launch the gallery
-            Intent galleryIntent = new Intent(this, GalleryActivity.class).setAction(intent.getAction());
-
-            if (Intent.ACTION_GET_CONTENT.equals(intent.getAction())) {
-                startActivityForResult(galleryIntent, REQ_CODE_GET_FILE);
-            }
-            else {
-                startActivity(galleryIntent);
-                finish();
-            }
-        }
     }
 
     private void uploadMultipleFiles(File[] files) {
-        Backend.getInstance().uploadFiles(files, mAccount.name, Backend.getInstance().getDefaultTags(),
-                mUiHandler, new FilesUploadedCallback() {
+        Backend.getInstance(this).uploadFiles(files, mAccount.name,
+                Backend.getInstance(this).getDefaultTags(), mUiHandler, new FilesUploadedCallback() {
                     public void onFilesUploaded(boolean error) {
                         if (error) {
                             setResult(RESULT_CANCELED);
@@ -155,13 +108,13 @@ public class MainActivity extends DroidBooruAccountActivity {
 
                         finish();
                     }
-                }, GalleryActivity.createUploadingProgressDialog(MainActivity.this));
+                }, GalleryActivity.createUploadingProgressDialog(UploadFilesActivity.this));
     }
 
     private void uploadSingleFile(Uri fileUri) {
-        Backend.getInstance().uploadFiles(
-                new File[] { Backend.getInstance().createTempFileForUri(fileUri, getContentResolver()) },
-                mAccount.name, Backend.getInstance().getDefaultTags(), mUiHandler,
+        Backend.getInstance(this).uploadFiles(
+                new File[] { Backend.getInstance(this).createTempFileForUri(fileUri, getContentResolver()) },
+                mAccount.name, Backend.getInstance(this).getDefaultTags(), mUiHandler,
                 new FilesUploadedCallback() {
                     public void onFilesUploaded(boolean error) {
                         if (error) {
@@ -173,7 +126,7 @@ public class MainActivity extends DroidBooruAccountActivity {
 
                         finish();
                     }
-                }, GalleryActivity.createUploadingProgressDialog(MainActivity.this));
+                }, GalleryActivity.createUploadingProgressDialog(UploadFilesActivity.this));
     }
 
     @Override
