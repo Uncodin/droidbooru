@@ -23,6 +23,7 @@ import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.List;
+import java.util.Locale;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -347,7 +348,8 @@ public abstract class Backend {
      * @return A comma-delimited list of tags
      */
     public String getDefaultTags() {
-        return "droidbooru," + new SimpleDateFormat("MM-dd-yy").format(Calendar.getInstance().getTime());
+        return "droidbooru,"
+                + new SimpleDateFormat("MM-dd-yy", Locale.US).format(Calendar.getInstance().getTime());
     }
 
     /**
