@@ -19,12 +19,7 @@ import android.util.Log;
 import android.view.Window;
 
 public class UploadFilesActivity extends DroidBooruAccountActivity {
-    private static final String TAG = "ReceiveContentActivity";
-
-    /**
-     * Request code to get a single file
-     */
-    private static final int REQ_CODE_GET_FILE = 0;
+    private static final String TAG = "UploadFilesActivity";
 
     private Handler mUiHandler;
 
@@ -132,17 +127,5 @@ public class UploadFilesActivity extends DroidBooruAccountActivity {
         }
 
         finish();
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == REQ_CODE_GET_FILE) {
-            // Received data back from gallery; exit
-            setResult(resultCode, data);
-            finish();
-        }
-        else {
-            super.onActivityResult(requestCode, resultCode, data);
-        }
     }
 }
