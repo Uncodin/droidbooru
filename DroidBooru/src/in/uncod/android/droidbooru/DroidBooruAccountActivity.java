@@ -12,11 +12,11 @@ import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.widget.Toast;
 
-import com.actionbarsherlock.app.SherlockActivity;
+import com.actionbarsherlock.app.SherlockFragmentActivity;
 import com.google.android.gms.common.AccountPicker;
 
-public abstract class DroidBooruAccountActivity extends SherlockActivity {
-    private static final int REQ_CODE_CHOOSE_ACCOUNT = 8675309;
+public abstract class DroidBooruAccountActivity extends SherlockFragmentActivity {
+    private static final int REQ_CODE_CHOOSE_ACCOUNT = 5309;
 
     protected Account mAccount;
 

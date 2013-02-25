@@ -420,7 +420,6 @@ public abstract class Backend {
             public void onFilesDownloaded(final int offset, final BooruFile[] files) {
                 if (files.length > 0) {
                     uiHandler.post(new Runnable() {
-
                         public void run() {
                             // Download thumbnails
                             new DownloadFilesTask(mDataDirectory, false,
