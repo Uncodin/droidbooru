@@ -13,9 +13,7 @@ import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.List;
 
-import android.app.ProgressDialog;
 import android.content.ActivityNotFoundException;
-import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -65,7 +63,7 @@ public class GalleryActivity extends DroidBooruAccountActivity {
 
                                     finish();
                                 }
-                            }, createDownloadingProgressDialog(GalleryActivity.this));
+                            });
                 }
                 else if (mSelectedItems.size() > 0) {
                     try {
@@ -87,8 +85,7 @@ public class GalleryActivity extends DroidBooruAccountActivity {
 
                                         finish();
                                     }
-
-                                }, createDownloadingProgressDialog(GalleryActivity.this));
+                                });
                     }
                     catch (MalformedURLException e) {
                         e.printStackTrace();
@@ -158,7 +155,7 @@ public class GalleryActivity extends DroidBooruAccountActivity {
                                                     getResources().getString(R.string.share_files_with)),
                                             REQ_CODE_CHOOSE_SHARING_APP);
                                 }
-                            }, createDownloadingProgressDialog(GalleryActivity.this));
+                            });
                 }
                 else if (mSelectedItems.size() == 1) {
                     // Sharing a single file
@@ -181,7 +178,7 @@ public class GalleryActivity extends DroidBooruAccountActivity {
                                                     getResources().getString(R.string.share_files_with)),
                                             REQ_CODE_CHOOSE_SHARING_APP);
                                 }
-                            }, createDownloadingProgressDialog(GalleryActivity.this));
+                            });
                 }
 
                 return true;
@@ -323,7 +320,6 @@ public class GalleryActivity extends DroidBooruAccountActivity {
                     runOnUiThread(new Runnable() {
                         public void run() {
                             mBackend.downloadFiles(NUM_FILES_INITIAL_DOWNLOAD, 0, mUiHandler,
-                                    createDownloadingProgressDialog(GalleryActivity.this),
                                     new UpdateDisplayedFilesCallback());
                         }
                     });
@@ -360,8 +356,7 @@ public class GalleryActivity extends DroidBooruAccountActivity {
                         mDownloadWhileScrolling = true;
 
                         Backend.getInstance(GalleryActivity.this).downloadFiles(NUM_FILES_INITIAL_DOWNLOAD,
-                                0, mUiHandler, createDownloadingProgressDialog(GalleryActivity.this),
-                                new UpdateDisplayedFilesCallback());
+                                0, mUiHandler, new UpdateDisplayedFilesCallback());
 
                         return true;
                     }
@@ -456,11 +451,7 @@ public class GalleryActivity extends DroidBooruAccountActivity {
                                         public void run() {
                                             if (!error) {
                                                 // Download and display the image that was just uploaded
-                                                mBackend.downloadFiles(
-                                                        1,
-                                                        0,
-                                                        mUiHandler,
-                                                        createDownloadingProgressDialog(GalleryActivity.this),
+                                                mBackend.downloadFiles(1, 0, mUiHandler,
                                                         new UpdateDisplayedFilesCallback());
                                             }
                                             else {
@@ -470,7 +461,7 @@ public class GalleryActivity extends DroidBooruAccountActivity {
                                         }
                                     });
                                 }
-                            }, createUploadingProgressDialog(GalleryActivity.this));
+                            });
                 }
                 else {
                     Toast.makeText(GalleryActivity.this, R.string.upload_failed, Toast.LENGTH_LONG).show();
@@ -542,7 +533,7 @@ public class GalleryActivity extends DroidBooruAccountActivity {
 
                     // User only has three pages of items left to scroll through; load more
                     mBackend.downloadFiles(NUM_FILES_INITIAL_DOWNLOAD, mBooruFileAdapter.getCount(),
-                            mUiHandler, null, new UpdateDisplayedFilesCallback() {
+                            mUiHandler, new UpdateDisplayedFilesCallback() {
                                 @Override
                                 public void onFilesDownloaded(int offset, BooruFile[] bFiles) {
                                     super.onFilesDownloaded(offset, bFiles);
@@ -569,24 +560,6 @@ public class GalleryActivity extends DroidBooruAccountActivity {
         startActivityForResult(
                 Intent.createChooser(intent, getResources().getString(R.string.upload_file_from)),
                 REQ_CODE_CHOOSE_FILE_UPLOAD);
-    }
-
-    public static ProgressDialog createDownloadingProgressDialog(Context context) {
-        ProgressDialog dialog = new ProgressDialog(context);
-        dialog.setTitle(R.string.downloading);
-        dialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
-        dialog.setCancelable(false);
-
-        return dialog;
-    }
-
-    public static ProgressDialog createUploadingProgressDialog(Context context) {
-        ProgressDialog dialog = new ProgressDialog(context);
-        dialog.setTitle(R.string.uploading);
-        dialog.setProgressStyle(ProgressDialog.STYLE_SPINNER);
-        dialog.setCancelable(false);
-
-        return dialog;
     }
 
     private void updateSelectedFiles(int position) {

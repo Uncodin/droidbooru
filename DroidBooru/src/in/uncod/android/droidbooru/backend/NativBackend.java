@@ -14,7 +14,6 @@ import in.uncod.nativ.ORMDatastore;
 import java.io.File;
 import java.net.MalformedURLException;
 
-import android.app.ProgressDialog;
 import android.os.Handler;
 import android.util.Log;
 
@@ -76,7 +75,7 @@ class NativBackend extends Backend {
 
     @Override
     public boolean uploadFiles(final File[] files, final String email, final String tags,
-            final Handler uiHandler, final FilesUploadedCallback callback, final ProgressDialog dialog) {
+            final Handler uiHandler, final FilesUploadedCallback callback) {
         if (!mConnectionChecker.canConnectToNetwork())
             return false;
 
@@ -84,7 +83,7 @@ class NativBackend extends Backend {
             mDatastore.authenticate("test", "test", new AuthCallback() {
                 public void finished(String extras) {
                     if (!mError) {
-                        doFileUpload(files, email, tags, uiHandler, callback, dialog);
+                        doFileUpload(files, email, tags, uiHandler, callback);
                     }
                     else {
                         callback.onFilesUploaded(true);
@@ -93,7 +92,7 @@ class NativBackend extends Backend {
             });
         }
         else {
-            doFileUpload(files, email, tags, uiHandler, callback, dialog);
+            doFileUpload(files, email, tags, uiHandler, callback);
         }
 
         return true;
@@ -101,7 +100,7 @@ class NativBackend extends Backend {
 
     @Override
     public boolean downloadFiles(final int number, final int offset, final Handler uiHandler,
-            final ProgressDialog dialog, final FilesDownloadedCallback callback) {
+            final FilesDownloadedCallback callback) {
         if (!mConnectionChecker.canConnectToNetwork())
             return false;
 
@@ -112,7 +111,7 @@ class NativBackend extends Backend {
                     super.finished(extras);
 
                     if (!mError) {
-                        queryExternalAndDownload(number, offset, uiHandler, dialog, callback);
+                        queryExternalAndDownload(number, offset, uiHandler, callback);
                     }
                     else {
                         callback.onFilesDownloaded(offset, new BooruFile[0]);
@@ -121,7 +120,7 @@ class NativBackend extends Backend {
             });
         }
         else {
-            queryExternalAndDownload(number, offset, uiHandler, dialog, callback);
+            queryExternalAndDownload(number, offset, uiHandler, callback);
         }
 
         return true;

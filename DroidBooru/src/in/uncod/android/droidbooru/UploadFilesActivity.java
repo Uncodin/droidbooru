@@ -62,7 +62,7 @@ public class UploadFilesActivity extends DroidBooruAccountActivity {
                                         finish();
                                     }
                                 }
-                            }, GalleryActivity.createDownloadingProgressDialog(this));
+                            });
                 }
                 catch (MalformedURLException e) {
                     e.printStackTrace();
@@ -108,7 +108,7 @@ public class UploadFilesActivity extends DroidBooruAccountActivity {
 
                         finish();
                     }
-                }, GalleryActivity.createUploadingProgressDialog(UploadFilesActivity.this));
+                });
     }
 
     private void uploadSingleFile(Uri fileUri) {
@@ -126,7 +126,7 @@ public class UploadFilesActivity extends DroidBooruAccountActivity {
 
                         finish();
                     }
-                }, GalleryActivity.createUploadingProgressDialog(UploadFilesActivity.this));
+                });
     }
 
     @Override
