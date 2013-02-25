@@ -1,27 +1,72 @@
 package in.uncod.android.droidbooru;
 
+import in.uncod.android.droidbooru.net.NotificationService;
 import android.accounts.Account;
 import android.accounts.AccountManager;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 import android.content.res.Resources;
+import android.net.Uri;
+import android.os.Bundle;
 import android.preference.PreferenceManager;
+import android.widget.Toast;
 
 import com.actionbarsherlock.app.SherlockActivity;
 import com.google.android.gms.common.AccountPicker;
 
-public class DroidBooruAccountActivity extends SherlockActivity {
-    public static final int REQ_CODE_CHOOSE_ACCOUNT = 8675309;
+public abstract class DroidBooruAccountActivity extends SherlockActivity {
+    private static final int REQ_CODE_CHOOSE_ACCOUNT = 8675309;
+
+    protected Account mAccount;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        // Workaround for AsyncTask troubles on Google TV
+        // http://stackoverflow.com/a/7818839/1200865
+        try {
+            Class.forName("android.os.AsyncTask");
+        }
+        catch (ClassNotFoundException e1) {
+            e1.printStackTrace();
+        }
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+
+        init();
+    }
+
+    private void init() {
+        mAccount = getDroidBooruAccount();
+
+        if (mAccount != null) {
+            // Start notification service
+            Intent service = new Intent(this, NotificationService.class);
+            startService(service);
+
+            onAccountLoaded();
+        } // Else, the user is forwarded to an account chooser activity
+    }
+
+    protected abstract void onAccountLoaded();
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == REQ_CODE_CHOOSE_ACCOUNT) {
+            // Returned from choosing an account
             if (data != null) {
                 storeAccount(data);
+
+                init();
             }
             else {
                 // No account selected
+                Toast.makeText(this, R.string.must_select_account, Toast.LENGTH_LONG).show();
                 finish();
             }
         }
@@ -30,7 +75,7 @@ public class DroidBooruAccountActivity extends SherlockActivity {
         }
     }
 
-    public Account getDroidBooruAccount() {
+    private Account getDroidBooruAccount() {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         Resources resources = getResources();
         Account retAccount = null;
@@ -42,13 +87,28 @@ public class DroidBooruAccountActivity extends SherlockActivity {
                     resources.getString(R.string.pref_account_type), ""));
         }
         else {
-            // Let user pick account
-            Intent intent = AccountPicker.newChooseAccountIntent(null, null, new String[] { "com.google" },
-                    false, null, null, null, null);
-            startActivityForResult(intent, REQ_CODE_CHOOSE_ACCOUNT);
+            // Ask user to select account
+            launchAccountPicker();
         }
 
         return retAccount;
+    }
+
+    protected void launchAccountPicker() {
+        Intent intent = AccountPicker.newChooseAccountIntent(null, null, new String[] { "com.google" },
+                false, null, null, null, null);
+
+        if (getPackageManager().resolveActivity(intent, 0) == null) {
+            // User probably needs the Google Play Services library
+            Toast.makeText(this, R.string.google_play_services_error, Toast.LENGTH_LONG).show();
+
+            intent = new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=com.google.android.gms"));
+
+            startActivity(intent);
+        }
+        else {
+            startActivityForResult(intent, REQ_CODE_CHOOSE_ACCOUNT);
+        }
     }
 
     private void storeAccount(Intent data) {

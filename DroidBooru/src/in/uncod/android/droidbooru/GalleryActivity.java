@@ -13,7 +13,6 @@ import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.List;
 
-import android.accounts.Account;
 import android.app.ProgressDialog;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
@@ -50,7 +49,7 @@ public class GalleryActivity extends DroidBooruAccountActivity {
             public boolean onMenuItemClick(com.actionbarsherlock.view.MenuItem item) {
                 if (mSelectedItems.size() > 1) {
                     // Zip up all selected files and send that to the requesting app
-                    Backend.getInstance().downloadAndZipFilesToCache(mSelectedItems,
+                    Backend.getInstance(GalleryActivity.this).downloadAndZipFilesToCache(mSelectedItems,
                             new OnTaskResultListener<List<File>>() {
                                 public void onTaskResult(List<File> result) {
                                     File zipFile = result.get(0);
@@ -71,7 +70,7 @@ public class GalleryActivity extends DroidBooruAccountActivity {
                 else if (mSelectedItems.size() > 0) {
                     try {
                         // Download the selected file
-                        Backend.getInstance().downloadTempFileFromHttp(
+                        Backend.getInstance(GalleryActivity.this).downloadTempFileFromHttp(
                                 Uri.parse(mSelectedItems.get(0).getActualUrl().toString()),
                                 new OnTaskResultListener<List<File>>() {
                                     public void onTaskResult(List<File> result) {
@@ -134,7 +133,7 @@ public class GalleryActivity extends DroidBooruAccountActivity {
                     // Sharing multiple files
                     final ArrayList<Uri> uris = new ArrayList<Uri>();
 
-                    Backend.getInstance().downloadActualFilesToCache(mSelectedItems,
+                    Backend.getInstance(GalleryActivity.this).downloadActualFilesToCache(mSelectedItems,
                             new OnTaskResultListener<List<File>>() {
                                 public void onTaskResult(List<File> result) {
                                     // Get URIs for the files
@@ -163,7 +162,7 @@ public class GalleryActivity extends DroidBooruAccountActivity {
                 }
                 else if (mSelectedItems.size() == 1) {
                     // Sharing a single file
-                    Backend.getInstance().downloadActualFilesToCache(mSelectedItems,
+                    Backend.getInstance(GalleryActivity.this).downloadActualFilesToCache(mSelectedItems,
                             new OnTaskResultListener<List<File>>() {
                                 public void onTaskResult(List<File> result) {
                                     if (result.get(0) == null) {
@@ -286,7 +285,6 @@ public class GalleryActivity extends DroidBooruAccountActivity {
     private GridView mGridView;
     private ArrayAdapter<BooruFile> mBooruFileAdapter;
 
-    private Account mAccount;
     private Intent mLaunchIntent;
     private boolean mDownloadWhileScrolling = true;
 
@@ -309,43 +307,36 @@ public class GalleryActivity extends DroidBooruAccountActivity {
         initializeUI();
     }
 
-    @Override
-    protected void onStart() {
-        super.onStart();
-
-        mAccount = getDroidBooruAccount();
-
-        if (mAccount != null) {
-            mBackend = Backend.getInstance();
-            if (!mBackend.connect(new BackendConnectedCallback() {
-                public void onBackendConnected(boolean error) {
-                    if (error) {
-                        runOnUiThread(new Runnable() {
-                            public void run() {
-                                Toast.makeText(GalleryActivity.this, R.string.could_not_connect,
-                                        Toast.LENGTH_LONG).show();
-                            }
-                        });
-                    }
-                    else {
-                        runOnUiThread(new Runnable() {
-                            public void run() {
-                                mBackend.downloadFiles(NUM_FILES_INITIAL_DOWNLOAD, 0, mUiHandler,
-                                        createDownloadingProgressDialog(GalleryActivity.this),
-                                        new UpdateDisplayedFilesCallback());
-                            }
-                        });
-                    }
+    protected void onAccountLoaded() {
+        mBackend = Backend.getInstance(this);
+        if (!mBackend.connect(new BackendConnectedCallback() {
+            public void onBackendConnected(boolean error) {
+                if (error) {
+                    runOnUiThread(new Runnable() {
+                        public void run() {
+                            Toast.makeText(GalleryActivity.this, R.string.could_not_connect,
+                                    Toast.LENGTH_LONG).show();
+                        }
+                    });
                 }
-            })) {
-                // Not connected to the network
-                Toast.makeText(this, R.string.network_disconnected, Toast.LENGTH_LONG).show();
+                else {
+                    runOnUiThread(new Runnable() {
+                        public void run() {
+                            mBackend.downloadFiles(NUM_FILES_INITIAL_DOWNLOAD, 0, mUiHandler,
+                                    createDownloadingProgressDialog(GalleryActivity.this),
+                                    new UpdateDisplayedFilesCallback());
+                        }
+                    });
+                }
             }
+        })) {
+            // Not connected to the network
+            Toast.makeText(this, R.string.network_disconnected, Toast.LENGTH_LONG).show();
+        }
 
-            String action = getIntent().getAction();
-            if (action != null && action.equals(Intent.ACTION_GET_CONTENT)) {
-                mActionMode = startActionMode(new GalleryActionModeHandler());
-            }
+        String action = getIntent().getAction();
+        if (action != null && action.equals(Intent.ACTION_GET_CONTENT)) {
+            mActionMode = startActionMode(new GalleryActionModeHandler());
         }
     }
 
@@ -368,8 +359,8 @@ public class GalleryActivity extends DroidBooruAccountActivity {
                         mBooruFileAdapter.clear();
                         mDownloadWhileScrolling = true;
 
-                        Backend.getInstance().downloadFiles(NUM_FILES_INITIAL_DOWNLOAD, 0, mUiHandler,
-                                createDownloadingProgressDialog(GalleryActivity.this),
+                        Backend.getInstance(GalleryActivity.this).downloadFiles(NUM_FILES_INITIAL_DOWNLOAD,
+                                0, mUiHandler, createDownloadingProgressDialog(GalleryActivity.this),
                                 new UpdateDisplayedFilesCallback());
 
                         return true;
