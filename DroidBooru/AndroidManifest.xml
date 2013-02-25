@@ -35,6 +35,7 @@
         </activity>
         <activity
             android:name=".UploadFilesActivity"
+            android:configChanges="orientation"
             android:permission="android.permission.INTERNET" >
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
