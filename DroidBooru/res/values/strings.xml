@@ -28,5 +28,6 @@
     <string name="new_file_notification_title">New files available</string>
     <string name="new_file_notification_body">%s</string>
     <string name="must_select_account">You need to pick an account to use DroidBooru!</string>
+    <string name="google_play_services_error">Please install or update Google Play Services</string>
 
 </resources>
