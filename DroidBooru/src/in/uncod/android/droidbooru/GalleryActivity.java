@@ -483,6 +483,7 @@ public class GalleryActivity extends DroidBooruAccountActivity {
 
         mGridView = (GridView) findViewById(R.id.images);
         mGridView.setAdapter(mBooruFileAdapter);
+        mGridView.setEmptyView(findViewById(android.R.id.empty));
 
         mGridView.setOnItemLongClickListener(new OnItemLongClickListener() {
             public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
