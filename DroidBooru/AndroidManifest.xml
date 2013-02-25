@@ -11,18 +11,31 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.GET_ACCOUNTS" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <uses-permission android:name="android.permission.VIBRATE"/>
+    <uses-permission android:name="android.permission.VIBRATE" />
 
     <application
+        android:allowBackup="true"
         android:icon="@drawable/ic_launcher"
         android:label="@string/app_name"
         android:theme="@style/Theme.Sherlock.Light.ForceOverflow" >
-        <activity android:name=".MainActivity" >
+        <activity android:name=".GalleryActivity" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.GET_CONTENT" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.OPENABLE" />
+
+                <data android:mimeType="*/*" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".UploadFilesActivity"
+            android:permission="android.permission.INTERNET" >
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
 
@@ -37,16 +50,7 @@
 
                 <data android:mimeType="*/*" />
             </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.GET_CONTENT" />
-
-                <category android:name="android.intent.category.DEFAULT" />
-                <category android:name="android.intent.category.OPENABLE" />
-
-                <data android:mimeType="*/*" />
-            </intent-filter>
         </activity>
-        <activity android:name=".GalleryActivity" />
         <activity android:name=".LoginSettingsActivity" />
 
         <service android:name=".net.NotificationService" />

@@ -4,7 +4,6 @@ import in.uncod.android.droidbooru.BooruFile;
 import in.uncod.android.droidbooru.GalleryActivity;
 import in.uncod.android.droidbooru.R;
 import in.uncod.android.droidbooru.backend.Backend;
-import in.uncod.android.net.ConnectivityAgent;
 
 import java.util.Calendar;
 import java.util.Timer;
@@ -15,11 +14,8 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
-import android.content.SharedPreferences;
-import android.content.res.Resources;
 import android.os.IBinder;
 import android.os.Looper;
-import android.preference.PreferenceManager;
 import android.util.Log;
 
 public class NotificationService extends Service {
@@ -47,31 +43,6 @@ public class NotificationService extends Service {
     @Override
     public void onCreate() {
         if (mTimer == null) {
-            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-            Resources resources = getResources();
-
-            // Determine selected server address & name
-            String[] serverNames = resources.getStringArray(R.array.server_list);
-            String[] serverAddresses = resources.getStringArray(R.array.server_list_values);
-
-            String selectedServerAddress = prefs.getString(
-                    resources.getString(R.string.pref_selected_server),
-                    resources.getString(R.string.dv_pref_selected_server));
-
-            int i = 0;
-            for (String name : serverNames) {
-                if (serverAddresses[i].equals(selectedServerAddress)) {
-                    mServerName = name;
-                    break;
-                }
-
-                i++;
-            }
-
-            // Initialize backend
-            Backend.init(this, getExternalFilesDir(null), getExternalCacheDir(), selectedServerAddress,
-                    new ConnectivityAgent(this));
-
             // Schedule check for new files every N minutes
             mTimer = new Timer("ImageUpdate", true);
             mTimer.schedule(new TimerTask() {
@@ -85,24 +56,27 @@ public class NotificationService extends Service {
                         mLooped = true;
                     }
 
-                    Backend.getInstance().queryExternalFiles(1, 0, new FilesDownloadedCallback() {
-                        public void onFilesDownloaded(int offset, BooruFile[] files) {
-                            if (files != null && files.length > 0) {
-                                if (mNewestFile == null) {
-                                    // First run; save newest file
-                                    mNewestFile = files[0].getUniqueId();
-                                }
-                                else {
-                                    if (!mNewestFile.equals(files[0].getUniqueId())) {
-                                        // Save newest file and send notification
-                                        mNewestFile = files[0].getUniqueId();
+                    mServerName = Backend.getServerName(NotificationService.this);
 
-                                        showNotification();
+                    Backend.getInstance(NotificationService.this).queryExternalFiles(1, 0,
+                            new FilesDownloadedCallback() {
+                                public void onFilesDownloaded(int offset, BooruFile[] files) {
+                                    if (files != null && files.length > 0) {
+                                        if (mNewestFile == null) {
+                                            // First run; save newest file
+                                            mNewestFile = files[0].getUniqueId();
+                                        }
+                                        else {
+                                            if (!mNewestFile.equals(files[0].getUniqueId())) {
+                                                // Save newest file and send notification
+                                                mNewestFile = files[0].getUniqueId();
+
+                                                showNotification();
+                                            }
+                                        }
                                     }
                                 }
-                            }
-                        }
-                    });
+                            });
                 }
             }, Calendar.getInstance().getTime(), IMAGE_CHECK_INTERVAL_MILLIS);
         }
