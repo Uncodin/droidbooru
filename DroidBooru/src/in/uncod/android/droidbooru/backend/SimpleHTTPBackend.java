@@ -17,7 +17,6 @@ import org.apache.http.impl.client.DefaultHttpClient;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import android.app.ProgressDialog;
 import android.os.AsyncTask;
 import android.os.Handler;
 
@@ -118,22 +117,21 @@ public class SimpleHTTPBackend extends Backend {
 
     @Override
     public boolean uploadFiles(File[] files, String email, String tags, Handler uiHandler,
-            FilesUploadedCallback callback, ProgressDialog dialog) {
+            FilesUploadedCallback callback) {
         if (!mConnectionChecker.canConnectToNetwork())
             return false;
 
-        doFileUpload(files, email, tags, uiHandler, callback, dialog);
+        doFileUpload(files, email, tags, uiHandler, callback);
 
         return true;
     }
 
     @Override
-    public boolean downloadFiles(int number, int offset, Handler uiHandler, ProgressDialog dialog,
-            FilesDownloadedCallback callback) {
+    public boolean downloadFiles(int number, int offset, Handler uiHandler, FilesDownloadedCallback callback) {
         if (!mConnectionChecker.canConnectToNetwork())
             return false;
 
-        queryExternalAndDownload(number, offset, uiHandler, dialog, callback);
+        queryExternalAndDownload(number, offset, uiHandler, callback);
 
         return true;
     }

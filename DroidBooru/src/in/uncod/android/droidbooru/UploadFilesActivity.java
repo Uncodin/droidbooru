@@ -16,25 +16,26 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
+import android.view.Window;
 
 public class UploadFilesActivity extends DroidBooruAccountActivity {
-    private static final String TAG = "ReceiveContentActivity";
-
-    /**
-     * Request code to get a single file
-     */
-    private static final int REQ_CODE_GET_FILE = 0;
+    private static final String TAG = "UploadFilesActivity";
 
     private Handler mUiHandler;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        requestWindowFeature(Window.FEATURE_INDETERMINATE_PROGRESS);
+
+        setContentView(R.layout.activity_upload_files);
 
         mUiHandler = new Handler();
     }
 
     protected void onAccountLoaded() {
+        setProgressBarIndeterminateVisibility(true);
+
         Intent intent = getIntent();
         if (Intent.ACTION_SEND.equals(intent.getAction())) {
             // Started via Share request
@@ -62,7 +63,7 @@ public class UploadFilesActivity extends DroidBooruAccountActivity {
                                         finish();
                                     }
                                 }
-                            }, GalleryActivity.createDownloadingProgressDialog(this));
+                            });
                 }
                 catch (MalformedURLException e) {
                     e.printStackTrace();
@@ -99,16 +100,9 @@ public class UploadFilesActivity extends DroidBooruAccountActivity {
         Backend.getInstance(this).uploadFiles(files, mAccount.name,
                 Backend.getInstance(this).getDefaultTags(), mUiHandler, new FilesUploadedCallback() {
                     public void onFilesUploaded(boolean error) {
-                        if (error) {
-                            setResult(RESULT_CANCELED);
-                        }
-                        else {
-                            setResult(RESULT_OK);
-                        }
-
-                        finish();
+                        finishUpload(error);
                     }
-                }, GalleryActivity.createUploadingProgressDialog(UploadFilesActivity.this));
+                });
     }
 
     private void uploadSingleFile(Uri fileUri) {
@@ -117,27 +111,21 @@ public class UploadFilesActivity extends DroidBooruAccountActivity {
                 mAccount.name, Backend.getInstance(this).getDefaultTags(), mUiHandler,
                 new FilesUploadedCallback() {
                     public void onFilesUploaded(boolean error) {
-                        if (error) {
-                            setResult(RESULT_CANCELED);
-                        }
-                        else {
-                            setResult(RESULT_OK);
-                        }
-
-                        finish();
+                        finishUpload(error);
                     }
-                }, GalleryActivity.createUploadingProgressDialog(UploadFilesActivity.this));
+                });
     }
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == REQ_CODE_GET_FILE) {
-            // Received data back from gallery; exit
-            setResult(resultCode, data);
-            finish();
+    private void finishUpload(boolean error) {
+        setProgressBarIndeterminateVisibility(false);
+
+        if (error) {
+            setResult(RESULT_CANCELED);
         }
         else {
-            super.onActivityResult(requestCode, resultCode, data);
+            setResult(RESULT_OK);
         }
+
+        finish();
     }
 }

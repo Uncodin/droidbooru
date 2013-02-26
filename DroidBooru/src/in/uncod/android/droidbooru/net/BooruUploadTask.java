@@ -1,6 +1,6 @@
 package in.uncod.android.droidbooru.net;
 
-import in.uncod.android.util.threading.TaskWithProgressAndListener;
+import in.uncod.android.util.threading.TaskWithResultListener;
 
 import java.io.File;
 import java.io.IOException;
@@ -13,7 +13,6 @@ import org.apache.http.entity.mime.content.FileBody;
 import org.apache.http.entity.mime.content.StringBody;
 import org.apache.http.impl.client.DefaultHttpClient;
 
-import android.app.ProgressDialog;
 import android.util.Log;
 
 /**
@@ -21,7 +20,7 @@ import android.util.Log;
  * 
  * Use the execute() method to start the upload in a background thread.
  */
-public class BooruUploadTask extends TaskWithProgressAndListener<File, Void, Boolean> {
+public class BooruUploadTask extends TaskWithResultListener<File, Void, Boolean> {
     private static final String TAG = "BooruUploadTask";
 
     private URI mApiUrl;
@@ -40,13 +39,9 @@ public class BooruUploadTask extends TaskWithProgressAndListener<File, Void, Boo
      *            A comma-delimited list of tags, e.g. "animal,pop tart,cat"
      * @param listener
      *            If not null, the result listener will be activated once all uploads have completed
-     * @param dialog
-     *            If not null, the progress dialog will be automatically displayed and show the current progress towards
-     *            upload completion
      */
-    public BooruUploadTask(URI apiUrl, String email, String tags, OnTaskResultListener<Boolean> listener,
-            ProgressDialog dialog) {
-        super(listener, dialog);
+    public BooruUploadTask(URI apiUrl, String email, String tags, OnTaskResultListener<Boolean> listener) {
+        super(listener);
 
         mApiUrl = apiUrl;
         mEmail = email;
