@@ -64,6 +64,11 @@ public class GalleryFragment extends SherlockFragment {
      */
     protected static final int NUM_FILES_INITIAL_DOWNLOAD = 20;
 
+    /**
+     * The number of files to download when scrolling near the end of the gallery
+     */
+    private static final int NUM_FILES_DOWNLOAD_WHILE_SCROLLING = 5;
+
     Backend mBackend;
 
     private GridView mGridView;
@@ -217,7 +222,7 @@ public class GalleryFragment extends SherlockFragment {
                     mDownloadWhileScrolling = false;
 
                     // User only has three pages of items left to scroll through; load more
-                    mBackend.downloadFiles(NUM_FILES_INITIAL_DOWNLOAD, mBooruFileAdapter.getCount(),
+                    mBackend.downloadFiles(NUM_FILES_DOWNLOAD_WHILE_SCROLLING, mBooruFileAdapter.getCount(),
                             mUiHandler, new UpdateDisplayedFilesCallback() {
                                 @Override
                                 public void onFilesDownloaded(int offset, BooruFile[] bFiles) {
