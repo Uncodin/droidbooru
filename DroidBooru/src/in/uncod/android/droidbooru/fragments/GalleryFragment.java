@@ -155,12 +155,14 @@ public class GalleryFragment extends SherlockFragment {
         mLaunchIntent = new Intent();
         mLaunchIntent.setAction(android.content.Intent.ACTION_VIEW);
 
-        mBooruFileAdapter = new ArrayAdapter<BooruFile>(getActivity(), 0) {
-            @Override
-            public View getView(int position, View convertView, ViewGroup parent) {
-                return displayThumbInView(convertView, mBooruFileAdapter.getItem(position));
-            }
-        };
+        if (mBooruFileAdapter == null) {
+            mBooruFileAdapter = new ArrayAdapter<BooruFile>(getActivity(), 0) {
+                @Override
+                public View getView(int position, View convertView, ViewGroup parent) {
+                    return displayThumbInView(convertView, mBooruFileAdapter.getItem(position));
+                }
+            };
+        }
 
         mGridView = (GridView) mRootView.findViewById(R.id.images);
         mGridView.setAdapter(mBooruFileAdapter);
