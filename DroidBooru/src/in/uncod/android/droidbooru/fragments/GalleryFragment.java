@@ -238,6 +238,9 @@ public class GalleryFragment extends SherlockFragment {
     }
 
     public void load() {
+        if (mBackend != null)
+            return; // No need to load if the Backend has been set before
+
         mBackend = Backend.getInstance(getActivity());
         if (!mBackend.connect(new BackendConnectedCallback() {
             public void onBackendConnected(boolean error) {
