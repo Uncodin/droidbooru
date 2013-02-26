@@ -29,7 +29,6 @@ import java.util.zip.ZipOutputStream;
 
 import org.apache.http.HttpHost;
 
-import android.app.ProgressDialog;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -204,15 +203,13 @@ public abstract class Backend {
      *            A URI describing the file's location
      * @param callback
      *            A callback to activate when the file as been downloaded
-     * @param dialog
-     *            An optional progress dialog
      * 
      * @throws MalformedURLException
      *             If the given URI is invalid
      */
-    public void downloadTempFileFromHttp(final Uri uri, OnTaskResultListener<List<File>> callback,
-            ProgressDialog dialog) throws MalformedURLException {
-        new DownloadFilesTask(mCacheDirectory, false, callback, dialog).execute(new URL(uri.toString()));
+    public void downloadTempFileFromHttp(final Uri uri, OnTaskResultListener<List<File>> callback)
+            throws MalformedURLException {
+        new DownloadFilesTask(mCacheDirectory, false, callback).execute(new URL(uri.toString()));
     }
 
     /**
@@ -222,11 +219,8 @@ public abstract class Backend {
      *            The list of BooruFiles to download
      * @param callback
      *            A callback to activate once the download has finished
-     * @param dialog
-     *            An optional progress dialog
      */
-    public void downloadActualFilesToCache(List<BooruFile> files, OnTaskResultListener<List<File>> callback,
-            ProgressDialog dialog) {
+    public void downloadActualFilesToCache(List<BooruFile> files, OnTaskResultListener<List<File>> callback) {
         URL[] urls = new URL[files.size()];
 
         // Get the file URLs
@@ -236,7 +230,7 @@ public abstract class Backend {
             i++;
         }
 
-        new DownloadFilesTask(mCacheDirectory, false, callback, dialog).execute(urls);
+        new DownloadFilesTask(mCacheDirectory, false, callback).execute(urls);
     }
 
     /**
@@ -247,11 +241,9 @@ public abstract class Backend {
      * @param callback
      *            A callback to activate once the download has finished. The zip file will be the only file in the
      *            result list.
-     * @param dialog
-     *            An optional progress dialog
      */
     public void downloadAndZipFilesToCache(List<BooruFile> files,
-            final OnTaskResultListener<List<File>> callback, ProgressDialog dialog) {
+            final OnTaskResultListener<List<File>> callback) {
         downloadActualFilesToCache(files, new OnTaskResultListener<List<File>>() {
             public void onTaskResult(List<File> result) {
                 // Create zip file
@@ -291,7 +283,7 @@ public abstract class Backend {
                 // Return zip file
                 callback.onTaskResult(Arrays.asList(new File[] { zipFile }));
             }
-        }, dialog);
+        });
     }
 
     URL[] getThumbUrlsForBooruFiles(BooruFile[] bFiles) {
@@ -319,16 +311,14 @@ public abstract class Backend {
      *            A Handler instance attached to a UI thread; an async task will be started on this thread
      * @param callback
      *            If not null, this callback will be activated after the files are uploaded
-     * @param dialog
-     *            If not null, this dialog will be automatically updated with the upload progress & dismissed
      * 
      * @return true if a connection to the network is available at the time of the upload request
      */
     public abstract boolean uploadFiles(final File[] files, final String email, final String tags,
-            final Handler uiHandler, final FilesUploadedCallback callback, final ProgressDialog dialog);
+            final Handler uiHandler, final FilesUploadedCallback callback);
 
     protected void doFileUpload(final File[] files, final String email, final String tags, Handler uiHandler,
-            final FilesUploadedCallback callback, final ProgressDialog dialog) {
+            final FilesUploadedCallback callback) {
         uiHandler.post(new Runnable() {
             public void run() {
                 new BooruUploadTask(mServerFilePostUrl, email, tags, new OnTaskResultListener<Boolean>() {
@@ -337,7 +327,7 @@ public abstract class Backend {
                             callback.onFilesUploaded(error);
                         }
                     }
-                }, dialog).execute(files);
+                }).execute(files);
             }
         });
     }
@@ -363,7 +353,7 @@ public abstract class Backend {
      * @return true if a connection to the service was available
      */
     public abstract boolean downloadFiles(final int number, final int offset, final Handler uiHandler,
-            final ProgressDialog dialog, final FilesDownloadedCallback callback);
+            final FilesDownloadedCallback callback);
 
     /**
      * Queries the nodebooru service for a list of files, ordered by uploaded date, descending
@@ -420,19 +410,16 @@ public abstract class Backend {
      *            The number of files to skip
      * @param uiHandler
      *            A Handler on the UI thread
-     * @param dialog
-     *            If not null, this dialog will be shown to report progress
      * @param callback
      *            If not null, this callback will be activated after the files are downloaded
      */
     protected void queryExternalAndDownload(int number, final int offset, final Handler uiHandler,
-            final ProgressDialog dialog, final FilesDownloadedCallback callback) {
+            final FilesDownloadedCallback callback) {
         Log.d(TAG, "Downloading " + number + " files from offset " + offset);
         queryExternalFiles(number, offset, new FilesDownloadedCallback() {
             public void onFilesDownloaded(final int offset, final BooruFile[] files) {
                 if (files.length > 0) {
                     uiHandler.post(new Runnable() {
-
                         public void run() {
                             // Download thumbnails
                             new DownloadFilesTask(mDataDirectory, false,
@@ -448,7 +435,7 @@ public abstract class Backend {
                                             if (callback != null)
                                                 callback.onFilesDownloaded(offset, files);
                                         }
-                                    }, dialog).execute(getThumbUrlsForBooruFiles(files));
+                                    }).execute(getThumbUrlsForBooruFiles(files));
                         }
                     });
                 }

@@ -23,7 +23,6 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import android.app.ProgressDialog;
 import android.content.Context;
 import android.os.AsyncTask;
 import android.os.Handler;
@@ -166,8 +165,8 @@ public class MODLiveBackend extends Backend {
         }
 
         public DownloadFilesTask(File destinationPath, boolean overwriteExisting,
-                OnTaskResultListener<List<File>> listener, ProgressDialog dialog) {
-            super(destinationPath, overwriteExisting, listener, dialog);
+                OnTaskResultListener<List<File>> listener) {
+            super(destinationPath, overwriteExisting, listener);
         }
 
         @Override
@@ -193,9 +192,8 @@ public class MODLiveBackend extends Backend {
      * MOD Live-specific implementation of upload task
      */
     private class BooruUploadTask extends in.uncod.android.droidbooru.net.BooruUploadTask {
-        public BooruUploadTask(URI apiUrl, String email, String tags, OnTaskResultListener<Boolean> listener,
-                ProgressDialog dialog) {
-            super(apiUrl, email, tags, listener, dialog);
+        public BooruUploadTask(URI apiUrl, String email, String tags, OnTaskResultListener<Boolean> listener) {
+            super(apiUrl, email, tags, listener);
         }
 
         @Override
@@ -238,7 +236,7 @@ public class MODLiveBackend extends Backend {
 
     @Override
     public boolean uploadFiles(final File[] files, final String email, final String tags, Handler uiHandler,
-            final FilesUploadedCallback callback, final ProgressDialog dialog) {
+            final FilesUploadedCallback callback) {
         uiHandler.post(new Runnable() {
             public void run() {
                 new BooruUploadTask(mServerFilePostUrl, email, tags, new OnTaskResultListener<Boolean>() {
@@ -247,7 +245,7 @@ public class MODLiveBackend extends Backend {
                             callback.onFilesUploaded(error);
                         }
                     }
-                }, dialog).execute(files);
+                }).execute(files);
             }
         });
 
@@ -256,7 +254,7 @@ public class MODLiveBackend extends Backend {
 
     @Override
     public boolean downloadFiles(int number, int offset, final Handler uiHandler,
-            final ProgressDialog dialog, final FilesDownloadedCallback callback) {
+            final FilesDownloadedCallback callback) {
         Log.d(TAG, "Downloading " + number + " files from offset " + offset);
         queryExternalFiles(number, offset, new FilesDownloadedCallback() {
             public void onFilesDownloaded(final int offset, final BooruFile[] files) {
@@ -278,7 +276,7 @@ public class MODLiveBackend extends Backend {
                                             if (callback != null)
                                                 callback.onFilesDownloaded(offset, files);
                                         }
-                                    }, dialog).execute(getThumbUrlsForBooruFiles(files));
+                                    }).execute(getThumbUrlsForBooruFiles(files));
                         }
                     });
                 }
