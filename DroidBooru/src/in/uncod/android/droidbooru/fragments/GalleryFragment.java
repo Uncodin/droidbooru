@@ -238,8 +238,14 @@ public class GalleryFragment extends SherlockFragment {
     }
 
     public void load() {
-        if (mBackend != null)
+        if (mBackend != null) {
+            if (!mDownloadWhileScrolling) {
+                // If this flag isn't set, we should be in the middle of a download
+                getActivity().setProgressBarIndeterminateVisibility(true);
+            }
+
             return; // No need to load if the Backend has been set before
+        }
 
         mBackend = Backend.getInstance(getActivity());
         if (!mBackend.connect(new BackendConnectedCallback() {
