@@ -27,7 +27,8 @@
         android:id="@+id/input_server_address"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="@string/server_address" />
+        android:hint="@string/server_address"
+        android:inputType="textUri" />
 
     <Button
         android:id="@+id/save_account"
