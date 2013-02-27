@@ -32,43 +32,46 @@ public class GallerySelectionHandler implements ActionMode.Callback {
         public boolean onMenuItemClick(com.actionbarsherlock.view.MenuItem item) {
             if (galleryFrag.mSelectedItems.size() > 1) {
                 // Zip up all selected files and send that to the requesting app
-                Backend.getInstance(galleryFrag.getActivity()).downloadAndZipFilesToCache(
-                        galleryFrag.mSelectedItems, new OnTaskResultListener<List<File>>() {
-                            public void onTaskResult(List<File> result) {
-                                File zipFile = result.get(0);
-                                if (zipFile != null) {
-                                    galleryFrag.mContainer.onSelectedFiles(new Intent().setData(Uri
-                                            .fromFile(zipFile)));
-                                }
-                                else {
-                                    Toast.makeText(galleryFrag.getActivity(), R.string.could_not_get_file,
-                                            Toast.LENGTH_LONG).show();
+                Backend.getInstance(galleryFrag.getActivity(), galleryFrag.mContainer.getAccount())
+                        .downloadAndZipFilesToCache(galleryFrag.mSelectedItems,
+                                new OnTaskResultListener<List<File>>() {
+                                    public void onTaskResult(List<File> result) {
+                                        File zipFile = result.get(0);
+                                        if (zipFile != null) {
+                                            galleryFrag.mContainer.onSelectedFiles(new Intent().setData(Uri
+                                                    .fromFile(zipFile)));
+                                        }
+                                        else {
+                                            Toast.makeText(galleryFrag.getActivity(),
+                                                    R.string.could_not_get_file, Toast.LENGTH_LONG).show();
 
-                                    galleryFrag.mActionMode.finish();
-                                }
-                            }
-                        });
+                                            galleryFrag.mActionMode.finish();
+                                        }
+                                    }
+                                });
             }
             else if (galleryFrag.mSelectedItems.size() > 0) {
                 try {
                     // Download the selected file
-                    Backend.getInstance(galleryFrag.getActivity()).downloadTempFileFromHttp(
-                            Uri.parse(galleryFrag.mSelectedItems.get(0).getActualUrl().toString()),
-                            new OnTaskResultListener<List<File>>() {
-                                public void onTaskResult(List<File> result) {
-                                    File tempFile = result.get(0);
-                                    if (tempFile != null) {
-                                        galleryFrag.mContainer.onSelectedFiles(new Intent().setData(Uri
-                                                .fromFile(tempFile)));
-                                    }
-                                    else {
-                                        Toast.makeText(galleryFrag.getActivity(),
-                                                R.string.could_not_get_file, Toast.LENGTH_LONG).show();
+                    Backend.getInstance(galleryFrag.getActivity(), galleryFrag.mContainer.getAccount())
+                            .downloadTempFileFromHttp(
+                                    Uri.parse(galleryFrag.mSelectedItems.get(0).getActualUrl().toString()),
+                                    new OnTaskResultListener<List<File>>() {
+                                        public void onTaskResult(List<File> result) {
+                                            File tempFile = result.get(0);
+                                            if (tempFile != null) {
+                                                galleryFrag.mContainer.onSelectedFiles(new Intent()
+                                                        .setData(Uri.fromFile(tempFile)));
+                                            }
+                                            else {
+                                                Toast.makeText(galleryFrag.getActivity(),
+                                                        R.string.could_not_get_file, Toast.LENGTH_LONG)
+                                                        .show();
 
-                                        galleryFrag.mActionMode.finish();
-                                    }
-                                }
-                            });
+                                                galleryFrag.mActionMode.finish();
+                                            }
+                                        }
+                                    });
                 }
                 catch (MalformedURLException e) {
                     e.printStackTrace();
@@ -118,59 +121,59 @@ public class GallerySelectionHandler implements ActionMode.Callback {
                 // Sharing multiple files
                 final ArrayList<Uri> uris = new ArrayList<Uri>();
 
-                Backend.getInstance(galleryFrag.getActivity()).downloadActualFilesToCache(
-                        galleryFrag.mSelectedItems, new OnTaskResultListener<List<File>>() {
-                            public void onTaskResult(List<File> result) {
-                                // Get URIs for the files
-                                for (File file : result) {
-                                    if (file != null)
-                                        uris.add(Uri.fromFile(file));
-                                }
+                Backend.getInstance(galleryFrag.getActivity(), galleryFrag.mContainer.getAccount())
+                        .downloadActualFilesToCache(galleryFrag.mSelectedItems,
+                                new OnTaskResultListener<List<File>>() {
+                                    public void onTaskResult(List<File> result) {
+                                        // Get URIs for the files
+                                        for (File file : result) {
+                                            if (file != null)
+                                                uris.add(Uri.fromFile(file));
+                                        }
 
-                                if (uris.size() == 0) {
-                                    Toast.makeText(galleryFrag.getActivity(), R.string.could_not_connect,
-                                            Toast.LENGTH_LONG).show();
-                                    return;
-                                }
+                                        if (uris.size() == 0) {
+                                            Toast.makeText(galleryFrag.getActivity(),
+                                                    R.string.could_not_connect, Toast.LENGTH_LONG).show();
+                                            return;
+                                        }
 
-                                // Send sharing intent
-                                Intent intent = new Intent();
-                                intent.setAction(Intent.ACTION_SEND_MULTIPLE);
-                                intent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris);
-                                intent.setType("*/*");
-                                galleryFrag.startActivityForResult(
-                                        Intent.createChooser(
+                                        // Send sharing intent
+                                        Intent intent = new Intent();
+                                        intent.setAction(Intent.ACTION_SEND_MULTIPLE);
+                                        intent.putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris);
+                                        intent.setType("*/*");
+                                        galleryFrag.startActivityForResult(Intent.createChooser(
                                                 intent,
                                                 galleryFrag.getResources().getString(
                                                         R.string.share_files_with)),
-                                        GalleryFragment.REQ_CODE_CHOOSE_SHARING_APP);
-                            }
-                        });
+                                                GalleryFragment.REQ_CODE_CHOOSE_SHARING_APP);
+                                    }
+                                });
             }
             else if (galleryFrag.mSelectedItems.size() == 1) {
                 // Sharing a single file
-                Backend.getInstance(galleryFrag.getActivity()).downloadActualFilesToCache(
-                        galleryFrag.mSelectedItems, new OnTaskResultListener<List<File>>() {
-                            public void onTaskResult(List<File> result) {
-                                if (result.get(0) == null) {
-                                    Toast.makeText(galleryFrag.getActivity(), R.string.could_not_get_file,
-                                            Toast.LENGTH_LONG).show();
-                                    return;
-                                }
+                Backend.getInstance(galleryFrag.getActivity(), galleryFrag.mContainer.getAccount())
+                        .downloadActualFilesToCache(galleryFrag.mSelectedItems,
+                                new OnTaskResultListener<List<File>>() {
+                                    public void onTaskResult(List<File> result) {
+                                        if (result.get(0) == null) {
+                                            Toast.makeText(galleryFrag.getActivity(),
+                                                    R.string.could_not_get_file, Toast.LENGTH_LONG).show();
+                                            return;
+                                        }
 
-                                // Send sharing intent
-                                Intent intent = new Intent();
-                                intent.setAction(Intent.ACTION_SEND);
-                                intent.putExtra(Intent.EXTRA_STREAM, Uri.fromFile(result.get(0)));
-                                intent.setType("*/*");
-                                galleryFrag.startActivityForResult(
-                                        Intent.createChooser(
+                                        // Send sharing intent
+                                        Intent intent = new Intent();
+                                        intent.setAction(Intent.ACTION_SEND);
+                                        intent.putExtra(Intent.EXTRA_STREAM, Uri.fromFile(result.get(0)));
+                                        intent.setType("*/*");
+                                        galleryFrag.startActivityForResult(Intent.createChooser(
                                                 intent,
                                                 galleryFrag.getResources().getString(
                                                         R.string.share_files_with)),
-                                        GalleryFragment.REQ_CODE_CHOOSE_SHARING_APP);
-                            }
-                        });
+                                                GalleryFragment.REQ_CODE_CHOOSE_SHARING_APP);
+                                    }
+                                });
             }
 
             galleryFrag.mActionMode.finish();

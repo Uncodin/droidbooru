@@ -52,7 +52,7 @@ public class UploadFilesActivity extends DroidBooruAccountActivity {
             if (shareUri.getScheme().equals(HttpHost.DEFAULT_SCHEME_NAME)) {
                 // URI is HTTP link to file; download it first
                 try {
-                    Backend.getInstance(this).downloadTempFileFromHttp(shareUri,
+                    Backend.getInstance(this, mAccount).downloadTempFileFromHttp(shareUri,
                             new OnTaskResultListener<List<File>>() {
                                 public void onTaskResult(List<File> result) {
                                     if (result.size() > 0) {
@@ -87,7 +87,8 @@ public class UploadFilesActivity extends DroidBooruAccountActivity {
 
             int i = 0;
             for (Uri uri : fileUris) {
-                files[i] = Backend.getInstance(this).createTempFileForUri(uri, getContentResolver());
+                files[i] = Backend.getInstance(this, mAccount)
+                        .createTempFileForUri(uri, getContentResolver());
 
                 i++;
             }
@@ -97,8 +98,9 @@ public class UploadFilesActivity extends DroidBooruAccountActivity {
     }
 
     private void uploadMultipleFiles(File[] files) {
-        Backend.getInstance(this).uploadFiles(files, mAccount.name,
-                Backend.getInstance(this).getDefaultTags(), mUiHandler, new FilesUploadedCallback() {
+        Backend.getInstance(this, mAccount).uploadFiles(files, mAccount.name,
+                Backend.getInstance(this, mAccount).getDefaultTags(), mUiHandler,
+                new FilesUploadedCallback() {
                     public void onFilesUploaded(boolean error) {
                         finishUpload(error);
                     }
@@ -106,9 +108,10 @@ public class UploadFilesActivity extends DroidBooruAccountActivity {
     }
 
     private void uploadSingleFile(Uri fileUri) {
-        Backend.getInstance(this).uploadFiles(
-                new File[] { Backend.getInstance(this).createTempFileForUri(fileUri, getContentResolver()) },
-                mAccount.name, Backend.getInstance(this).getDefaultTags(), mUiHandler,
+        Backend.getInstance(this, mAccount).uploadFiles(
+                new File[] { Backend.getInstance(this, mAccount).createTempFileForUri(fileUri,
+                        getContentResolver()) }, mAccount.name,
+                Backend.getInstance(this, mAccount).getDefaultTags(), mUiHandler,
                 new FilesUploadedCallback() {
                     public void onFilesUploaded(boolean error) {
                         finishUpload(error);

@@ -1,9 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <string name="pref_selected_server">selected_server</string>
-    <string name="dv_pref_selected_server">img.uncod.in</string>
-    <string name="pref_account_name">account_name</string>
-    <string name="pref_account_type">account_type</string>
+    <string name="pref_selected_account_name">account_name</string>
 
 </resources>
