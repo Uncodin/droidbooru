@@ -8,13 +8,11 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 import android.content.res.Resources;
-import android.net.Uri;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.widget.Toast;
 
 import com.actionbarsherlock.app.SherlockFragmentActivity;
-import com.google.android.gms.common.AccountPicker;
 
 public abstract class DroidBooruAccountActivity extends SherlockFragmentActivity {
     private static final int REQ_CODE_CHOOSE_ACCOUNT = 5309;
@@ -61,7 +59,9 @@ public abstract class DroidBooruAccountActivity extends SherlockFragmentActivity
         if (requestCode == REQ_CODE_CHOOSE_ACCOUNT) {
             // Returned from choosing an account
             if (data != null) {
-                storeAccount(data);
+                String accountName = data.getStringExtra(AccountManager.KEY_ACCOUNT_NAME);
+
+                storeSelectedAccountName(accountName);
 
                 init();
             }
@@ -96,36 +96,22 @@ public abstract class DroidBooruAccountActivity extends SherlockFragmentActivity
 
                 if (retAccount == null) {
                     // Selected account doesn't exist; let user choose
-                    launchAccountPicker(Authenticator.ACCOUNT_TYPE_DROIDBOORU);
+                    Authenticator.launchAccountPicker(this, REQ_CODE_CHOOSE_ACCOUNT, null,
+                            Authenticator.ACCOUNT_TYPE_DROIDBOORU);
                 }
             }
             else {
                 // No previously selected account; let user choose
-                launchAccountPicker(Authenticator.ACCOUNT_TYPE_DROIDBOORU);
+                Authenticator.launchAccountPicker(this, REQ_CODE_CHOOSE_ACCOUNT, null,
+                        Authenticator.ACCOUNT_TYPE_DROIDBOORU);
             }
         }
         else {
-            // No existing DroidBooru accounts
-            launchAccountPicker("com.google");
+            // No existing DroidBooru accounts; let user create one
+            Authenticator.launchAccountCreator(this, AccountManager.get(this));
         }
 
         return retAccount;
-    }
-
-    protected void launchAccountPicker(String... types) {
-        Intent intent = AccountPicker.newChooseAccountIntent(null, null, types, true, null, null, null, null);
-
-        if (getPackageManager().resolveActivity(intent, 0) == null) {
-            // User probably needs the Google Play Services library
-            Toast.makeText(this, R.string.google_play_services_error, Toast.LENGTH_LONG).show();
-
-            intent = new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=com.google.android.gms"));
-
-            startActivity(intent);
-        }
-        else {
-            startActivityForResult(intent, REQ_CODE_CHOOSE_ACCOUNT);
-        }
     }
 
     private String getSelectedAccountName() {
@@ -135,33 +121,13 @@ public abstract class DroidBooruAccountActivity extends SherlockFragmentActivity
         return prefs.getString(resources.getString(R.string.pref_selected_account_name), "");
     }
 
-    private void storeAccount(Intent data) {
+    private void storeSelectedAccountName(String accountName) {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        Resources resources = this.getResources();
+        Resources resources = getResources();
 
-        String accountName = data.getStringExtra(AccountManager.KEY_ACCOUNT_NAME);
-        String accountType = data.getStringExtra(AccountManager.KEY_ACCOUNT_TYPE);
-
-        if (accountType.equals("com.google")) {
-            // Convert to a DroidBooru account
-            accountType = Authenticator.ACCOUNT_TYPE_DROIDBOORU;
-            Bundle accountData = new Bundle();
-
-            // TODO Store server information entered by user
-            accountData.putString(Authenticator.ACCOUNT_KEY_SERVER_NAME, "Uncodin");
-            accountData.putString(Authenticator.ACCOUNT_KEY_SERVER_ADDRESS, "img.uncod.in");
-
-            AccountManager.get(this).addAccountExplicitly(new Account(accountName, accountType), null,
-                    accountData);
-        }
-
-        storeAccountInPrefs(new Account(accountName, accountType), prefs, resources);
-    }
-
-    private void storeAccountInPrefs(Account account, SharedPreferences prefs, Resources resources) {
         Editor editor = prefs.edit();
 
-        editor.putString(resources.getString(R.string.pref_selected_account_name), account.name);
+        editor.putString(resources.getString(R.string.pref_selected_account_name), accountName);
 
         editor.commit();
     }
