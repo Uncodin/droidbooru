@@ -9,6 +9,7 @@ import in.uncod.nativ.HttpClientNetwork;
 import in.uncod.nativ.INetworkHandler;
 import in.uncod.nativ.Image;
 import in.uncod.nativ.KeyPredicate;
+import in.uncod.nativ.NetworkErrorDescriptor;
 import in.uncod.nativ.ORMDatastore;
 
 import java.io.File;
@@ -24,8 +25,9 @@ class NativBackend extends Backend {
         protected String mErrorMessage;
 
         @Override
-        public void onError(INetworkHandler handler, int errorCode, String message) {
-            super.onError(handler, errorCode, message);
+        public void onError(INetworkHandler handler, int errorCode, String message,
+                NetworkErrorDescriptor desc) {
+            super.onError(handler, errorCode, message, desc);
 
             mError = true;
             mErrorCode = errorCode;
@@ -45,7 +47,7 @@ class NativBackend extends Backend {
         String dbName = serverAddress.replace(':', '_') + ".db";
         mDatastore = ORMDatastore.create(new File(mCacheDirectory, dbName).getAbsolutePath());
         mDatastore.setDownloadPathPrefix(mDataDirectory.getAbsolutePath() + File.separator);
-        mDatastore.setNetworkHandler(new HttpClientNetwork(mServerApiUrl.toString()));
+        mDatastore.setNetworkHandler(new HttpClientNetwork(mDatastore, mServerApiUrl.toString()));
     }
 
     @Override
@@ -57,8 +59,9 @@ class NativBackend extends Backend {
             private boolean mError;
 
             @Override
-            public void onError(INetworkHandler handler, int errorCode, String message) {
-                super.onError(handler, errorCode, message);
+            public void onError(INetworkHandler handler, int errorCode, String message,
+                    NetworkErrorDescriptor desc) {
+                super.onError(handler, errorCode, message, desc);
 
                 mError = true;
             }
@@ -174,8 +177,11 @@ class NativBackend extends Backend {
             final FilesDownloadedCallback callback) {
         mDatastore.externalQueryImage(
                 KeyPredicate.defaultPredicate().orderBy("uploadedDate", true).limit(number).offset(offset),
-                null, new AbstractNetworkCallbacks() {
-                    public void onReceivedImage(ORMDatastore ds, String queryName, Image[] d) {
+                new AbstractNetworkCallbacks() {
+                    @Override
+                    public void onReceivedImage(ORMDatastore ds, String queryName, Image[] d, long count) {
+                        super.onReceivedImage(ds, queryName, d, count);
+
                         callback.onFilesDownloaded(offset, createBooruFilesForFiles(d));
                     };
                 });
