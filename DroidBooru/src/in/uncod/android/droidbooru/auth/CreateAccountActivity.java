@@ -2,7 +2,7 @@ package in.uncod.android.droidbooru.auth;
 
 import in.uncod.android.droidbooru.R;
 import android.accounts.Account;
-import android.accounts.AccountAuthenticatorResponse;
+import android.accounts.AccountAuthenticatorActivity;
 import android.accounts.AccountManager;
 import android.content.Intent;
 import android.os.Bundle;
@@ -11,16 +11,13 @@ import android.view.View.OnClickListener;
 import android.widget.EditText;
 import android.widget.TextView;
 
-import com.actionbarsherlock.app.SherlockFragmentActivity;
-
 /**
  * This activity provides a user interface for creating accounts
  */
-public class CreateAccountActivity extends SherlockFragmentActivity {
+public class CreateAccountActivity extends AccountAuthenticatorActivity {
     private static final int REQ_CODE_SELECT_GOOGLE_ACCOUNT = 0;
     private Account mSelectedAccount;
     private TextView mPreview;
-    private AccountAuthenticatorResponse mResponse;
     private EditText mServerName;
     private EditText mServerAddress;
 
@@ -28,9 +25,6 @@ public class CreateAccountActivity extends SherlockFragmentActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_create_account);
-
-        mResponse = (AccountAuthenticatorResponse) getIntent().getExtras().getParcelable(
-                AccountManager.KEY_ACCOUNT_AUTHENTICATOR_RESPONSE);
 
         mPreview = (TextView) findViewById(R.id.preview_google_account);
         mServerName = (EditText) findViewById(R.id.input_server_name);
@@ -60,8 +54,7 @@ public class CreateAccountActivity extends SherlockFragmentActivity {
                 result.putString(Authenticator.ACCOUNT_KEY_SERVER_ADDRESS, mServerAddress.getText()
                         .toString());
 
-                mResponse.onResult(result);
-
+                setAccountAuthenticatorResult(result);
                 finish();
             }
         });
