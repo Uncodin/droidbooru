@@ -41,7 +41,9 @@ class NativBackend extends Backend {
 
         TAG = "NativBackend";
 
-        mDatastore = ORMDatastore.create(new File(mCacheDirectory, "droidbooru.db").getAbsolutePath());
+        // Create a DB for this server
+        String dbName = serverAddress.replace(':', '_') + ".db";
+        mDatastore = ORMDatastore.create(new File(mCacheDirectory, dbName).getAbsolutePath());
         mDatastore.setDownloadPathPrefix(mDataDirectory.getAbsolutePath() + File.separator);
         mDatastore.setNetworkHandler(new HttpClientNetwork(mServerApiUrl.toString()));
     }
