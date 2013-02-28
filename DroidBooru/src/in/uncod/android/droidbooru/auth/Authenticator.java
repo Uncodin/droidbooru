@@ -5,6 +5,7 @@ import android.accounts.AbstractAccountAuthenticator;
 import android.accounts.Account;
 import android.accounts.AccountAuthenticatorResponse;
 import android.accounts.AccountManager;
+import android.accounts.AccountManagerCallback;
 import android.accounts.NetworkErrorException;
 import android.app.Activity;
 import android.content.Context;
@@ -136,9 +137,11 @@ public class Authenticator extends AbstractAccountAuthenticator {
      *            The parent Activity for the request
      * @param mgr
      *            AccountManager to use for the request
+     * @param callback
+     *            If not null, this callback will be invoked when the request completes
      */
-    public static void launchAccountCreator(Activity ctx, AccountManager mgr) {
-        mgr.addAccount(Authenticator.ACCOUNT_TYPE_DROIDBOORU, null, null, null, ctx,
-                new CreateAccountCallback(mgr), null);
+    public static void launchAccountCreator(Activity ctx, AccountManager mgr,
+            AccountManagerCallback<Bundle> callback) {
+        mgr.addAccount(Authenticator.ACCOUNT_TYPE_DROIDBOORU, null, null, null, ctx, callback, null);
     }
 }

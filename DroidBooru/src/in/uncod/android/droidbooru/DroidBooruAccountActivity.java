@@ -13,6 +13,9 @@ import android.preference.PreferenceManager;
 import android.widget.Toast;
 
 import com.actionbarsherlock.app.SherlockFragmentActivity;
+import com.actionbarsherlock.view.Menu;
+import com.actionbarsherlock.view.MenuItem;
+import com.actionbarsherlock.view.MenuItem.OnMenuItemClickListener;
 
 public abstract class DroidBooruAccountActivity extends SherlockFragmentActivity {
     private static final int REQ_CODE_CHOOSE_ACCOUNT = 5309;
@@ -34,25 +37,31 @@ public abstract class DroidBooruAccountActivity extends SherlockFragmentActivity
     }
 
     @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        menu.add(R.string.switch_account).setOnMenuItemClickListener(new OnMenuItemClickListener() {
+            @Override
+            public boolean onMenuItemClick(MenuItem item) {
+                // Let the user choose the new account
+                Authenticator.launchAccountPicker(DroidBooruAccountActivity.this, REQ_CODE_CHOOSE_ACCOUNT,
+                        mAccount, Authenticator.ACCOUNT_TYPE_DROIDBOORU);
+
+                return true;
+            }
+        }).setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER);
+
+        return super.onCreateOptionsMenu(menu);
+    }
+
+    @Override
     protected void onStart() {
         super.onStart();
 
-        init();
+        if (mAccount == null) {
+            getDroidBooruAccount(false);
+        }
     }
 
-    private void init() {
-        mAccount = getDroidBooruAccount();
-
-        if (mAccount != null) {
-            // Start notification service
-            Intent service = new Intent(this, NotificationService.class);
-            startService(service);
-
-            onAccountLoaded();
-        } // Else, the user is forwarded to an account chooser activity
-    }
-
-    protected abstract void onAccountLoaded();
+    protected abstract void onAccountLoaded(boolean switchingAccounts);
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -63,9 +72,10 @@ public abstract class DroidBooruAccountActivity extends SherlockFragmentActivity
 
                 storeSelectedAccountName(accountName);
 
-                init();
+                getDroidBooruAccount(false);
+                accountLoaded(mAccount != null);
             }
-            else {
+            else if (mAccount == null) {
                 // No account selected
                 Toast.makeText(this, R.string.must_select_account, Toast.LENGTH_LONG).show();
                 finish();
@@ -76,9 +86,7 @@ public abstract class DroidBooruAccountActivity extends SherlockFragmentActivity
         }
     }
 
-    private Account getDroidBooruAccount() {
-        Account retAccount = null;
-
+    private void getDroidBooruAccount(boolean switchingAccounts) {
         Account[] validAccounts = AccountManager.get(this).getAccountsByType(
                 Authenticator.ACCOUNT_TYPE_DROIDBOORU);
 
@@ -89,12 +97,13 @@ public abstract class DroidBooruAccountActivity extends SherlockFragmentActivity
                 // Use the previously selected account if possible
                 for (Account acct : validAccounts) {
                     if (acct.name.equals(selectedAccount)) {
-                        retAccount = acct;
+                        mAccount = acct;
+                        accountLoaded(switchingAccounts);
                         break;
                     }
                 }
 
-                if (retAccount == null) {
+                if (mAccount == null && !switchingAccounts) {
                     // Selected account doesn't exist; let user choose
                     Authenticator.launchAccountPicker(this, REQ_CODE_CHOOSE_ACCOUNT, null,
                             Authenticator.ACCOUNT_TYPE_DROIDBOORU);
@@ -108,10 +117,18 @@ public abstract class DroidBooruAccountActivity extends SherlockFragmentActivity
         }
         else {
             // No existing DroidBooru accounts; let user create one
-            Authenticator.launchAccountCreator(this, AccountManager.get(this));
+            Authenticator.launchAccountCreator(this, AccountManager.get(this), null);
         }
+    }
 
-        return retAccount;
+    private void accountLoaded(boolean switchingAccounts) {
+        if (mAccount != null) {
+            // Start notification service
+            Intent service = new Intent(this, NotificationService.class);
+            startService(service);
+
+            onAccountLoaded(switchingAccounts);
+        }
     }
 
     private String getSelectedAccountName() {

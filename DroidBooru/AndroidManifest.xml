@@ -54,7 +54,10 @@
                 <data android:mimeType="*/*" />
             </intent-filter>
         </activity>
-        <activity android:name=".auth.CreateAccountActivity" />
+        <activity
+            android:name=".auth.CreateAccountActivity"
+            android:exported="true"
+            android:permission="android.permission.MANAGE_ACCOUNTS" />
 
         <service android:name=".net.NotificationService" />
         <service

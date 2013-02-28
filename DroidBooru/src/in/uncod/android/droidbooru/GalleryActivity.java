@@ -17,11 +17,11 @@ public class GalleryActivity extends DroidBooruAccountActivity implements IGalle
         setContentView(R.layout.activity_gallery);
     }
 
-    protected void onAccountLoaded() {
+    protected void onAccountLoaded(boolean switchingAccounts) {
         GalleryFragment frag = (GalleryFragment) getSupportFragmentManager().findFragmentById(
                 R.id.fragment_gallery);
 
-        frag.load();
+        frag.load(switchingAccounts);
 
         String action = getIntent().getAction();
         if (action != null && action.equals(Intent.ACTION_GET_CONTENT)) {

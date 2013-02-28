@@ -29,5 +29,6 @@
     <string name="new_file_notification_body">%s</string>
     <string name="must_select_account">You need to pick an account to use DroidBooru!</string>
     <string name="gallery_empty">Ain\'t nobody here but us pixels.</string>
+    <string name="switch_account">Switch Account</string>
 
 </resources>

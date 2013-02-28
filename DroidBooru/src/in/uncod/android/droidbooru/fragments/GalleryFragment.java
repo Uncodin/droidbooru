@@ -242,14 +242,19 @@ public class GalleryFragment extends SherlockFragment {
         });
     }
 
-    public void load() {
-        if (mBackend != null) {
+    public void load(boolean forceReload) {
+        if (mBackend != null && !forceReload) {
             if (!mDownloadWhileScrolling) {
                 // If this flag isn't set, we should be in the middle of a download
                 getActivity().setProgressBarIndeterminateVisibility(true);
             }
 
             return; // No need to load if the Backend has been set before
+        }
+
+        // Clear the adapter if it exists
+        if (mBooruFileAdapter != null) {
+            mBooruFileAdapter.clear();
         }
 
         mBackend = Backend.getInstance(getActivity(), mContainer.getAccount());

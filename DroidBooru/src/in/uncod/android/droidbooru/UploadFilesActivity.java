@@ -33,7 +33,7 @@ public class UploadFilesActivity extends DroidBooruAccountActivity {
         mUiHandler = new Handler();
     }
 
-    protected void onAccountLoaded() {
+    protected void onAccountLoaded(boolean switchingAccounts) {
         setProgressBarIndeterminateVisibility(true);
 
         Intent intent = getIntent();
