@@ -242,8 +242,8 @@ public class GalleryFragment extends SherlockFragment {
         });
     }
 
-    public void load() {
-        if (mBackend != null) {
+    public void load(boolean forceReload) {
+        if (mBackend != null && !forceReload) {
             if (!mDownloadWhileScrolling) {
                 // If this flag isn't set, we should be in the middle of a download
                 getActivity().setProgressBarIndeterminateVisibility(true);
@@ -252,7 +252,12 @@ public class GalleryFragment extends SherlockFragment {
             return; // No need to load if the Backend has been set before
         }
 
-        mBackend = Backend.getInstance(getActivity());
+        // Clear the adapter if it exists
+        if (mBooruFileAdapter != null) {
+            mBooruFileAdapter.clear();
+        }
+
+        mBackend = Backend.getInstance(getActivity(), mContainer.getAccount());
         if (!mBackend.connect(new BackendConnectedCallback() {
             public void onBackendConnected(boolean error) {
                 if (error) {
@@ -297,8 +302,9 @@ public class GalleryFragment extends SherlockFragment {
                         mBooruFileAdapter.clear();
                         mDownloadWhileScrolling = true;
 
-                        Backend.getInstance(getActivity()).downloadFiles(NUM_FILES_INITIAL_DOWNLOAD, 0,
-                                mUiHandler, new UpdateDisplayedFilesCallback());
+                        Backend.getInstance(getActivity(), mContainer.getAccount())
+                                .downloadFiles(NUM_FILES_INITIAL_DOWNLOAD, 0, mUiHandler,
+                                        new UpdateDisplayedFilesCallback());
 
                         return true;
                     }
