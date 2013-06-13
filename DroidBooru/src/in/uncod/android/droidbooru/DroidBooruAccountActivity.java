@@ -1,5 +1,6 @@
 package in.uncod.android.droidbooru;
 
+import in.uncod.android.droidbooru.auth.Authenticator;
 import in.uncod.android.droidbooru.net.NotificationService;
 import android.accounts.Account;
 import android.accounts.AccountManager;
@@ -7,13 +8,14 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 import android.content.res.Resources;
-import android.net.Uri;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.widget.Toast;
 
 import com.actionbarsherlock.app.SherlockFragmentActivity;
-import com.google.android.gms.common.AccountPicker;
+import com.actionbarsherlock.view.Menu;
+import com.actionbarsherlock.view.MenuItem;
+import com.actionbarsherlock.view.MenuItem.OnMenuItemClickListener;
 
 public abstract class DroidBooruAccountActivity extends SherlockFragmentActivity {
     private static final int REQ_CODE_CHOOSE_ACCOUNT = 5309;
@@ -35,36 +37,45 @@ public abstract class DroidBooruAccountActivity extends SherlockFragmentActivity
     }
 
     @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        menu.add(R.string.switch_account).setOnMenuItemClickListener(new OnMenuItemClickListener() {
+            @Override
+            public boolean onMenuItemClick(MenuItem item) {
+                // Let the user choose the new account
+                Authenticator.launchAccountPicker(DroidBooruAccountActivity.this, REQ_CODE_CHOOSE_ACCOUNT,
+                        mAccount, Authenticator.ACCOUNT_TYPE_DROIDBOORU);
+
+                return true;
+            }
+        }).setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER);
+
+        return super.onCreateOptionsMenu(menu);
+    }
+
+    @Override
     protected void onStart() {
         super.onStart();
 
-        init();
+        if (mAccount == null) {
+            getDroidBooruAccount(false);
+        }
     }
 
-    private void init() {
-        mAccount = getDroidBooruAccount();
-
-        if (mAccount != null) {
-            // Start notification service
-            Intent service = new Intent(this, NotificationService.class);
-            startService(service);
-
-            onAccountLoaded();
-        } // Else, the user is forwarded to an account chooser activity
-    }
-
-    protected abstract void onAccountLoaded();
+    protected abstract void onAccountLoaded(boolean switchingAccounts);
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == REQ_CODE_CHOOSE_ACCOUNT) {
             // Returned from choosing an account
             if (data != null) {
-                storeAccount(data);
+                String accountName = data.getStringExtra(AccountManager.KEY_ACCOUNT_NAME);
 
-                init();
+                storeSelectedAccountName(accountName);
+
+                getDroidBooruAccount(false);
+                accountLoaded(mAccount != null);
             }
-            else {
+            else if (mAccount == null) {
                 // No account selected
                 Toast.makeText(this, R.string.must_select_account, Toast.LENGTH_LONG).show();
                 finish();
@@ -75,57 +86,65 @@ public abstract class DroidBooruAccountActivity extends SherlockFragmentActivity
         }
     }
 
-    private Account getDroidBooruAccount() {
+    private void getDroidBooruAccount(boolean switchingAccounts) {
+        Account[] validAccounts = AccountManager.get(this).getAccountsByType(
+                Authenticator.ACCOUNT_TYPE_DROIDBOORU);
+
+        if (validAccounts.length > 0) {
+            // Valid DroidBooru accounts exist
+            String selectedAccount = getSelectedAccountName();
+            if (selectedAccount != "") {
+                // Use the previously selected account if possible
+                for (Account acct : validAccounts) {
+                    if (acct.name.equals(selectedAccount)) {
+                        mAccount = acct;
+                        accountLoaded(switchingAccounts);
+                        break;
+                    }
+                }
+
+                if (mAccount == null && !switchingAccounts) {
+                    // Selected account doesn't exist; let user choose
+                    Authenticator.launchAccountPicker(this, REQ_CODE_CHOOSE_ACCOUNT, null,
+                            Authenticator.ACCOUNT_TYPE_DROIDBOORU);
+                }
+            }
+            else {
+                // No previously selected account; let user choose
+                Authenticator.launchAccountPicker(this, REQ_CODE_CHOOSE_ACCOUNT, null,
+                        Authenticator.ACCOUNT_TYPE_DROIDBOORU);
+            }
+        }
+        else {
+            // No existing DroidBooru accounts; let user create one
+            Authenticator.launchAccountCreator(this, AccountManager.get(this), null);
+        }
+    }
+
+    private void accountLoaded(boolean switchingAccounts) {
+        if (mAccount != null) {
+            // Start notification service
+            Intent service = new Intent(this, NotificationService.class);
+            startService(service);
+
+            onAccountLoaded(switchingAccounts);
+        }
+    }
+
+    private String getSelectedAccountName() {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         Resources resources = getResources();
-        Account retAccount = null;
 
-        // Get stored account if we have one
-        String storedAccountName = prefs.getString(resources.getString(R.string.pref_account_name), "");
-        if (storedAccountName != "") {
-            retAccount = new Account(storedAccountName, prefs.getString(
-                    resources.getString(R.string.pref_account_type), ""));
-        }
-        else {
-            // Ask user to select account
-            launchAccountPicker();
-        }
-
-        return retAccount;
+        return prefs.getString(resources.getString(R.string.pref_selected_account_name), "");
     }
 
-    protected void launchAccountPicker() {
-        Intent intent = AccountPicker.newChooseAccountIntent(null, null, new String[] { "com.google" },
-                false, null, null, null, null);
-
-        if (getPackageManager().resolveActivity(intent, 0) == null) {
-            // User probably needs the Google Play Services library
-            Toast.makeText(this, R.string.google_play_services_error, Toast.LENGTH_LONG).show();
-
-            intent = new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=com.google.android.gms"));
-
-            startActivity(intent);
-        }
-        else {
-            startActivityForResult(intent, REQ_CODE_CHOOSE_ACCOUNT);
-        }
-    }
-
-    private void storeAccount(Intent data) {
+    private void storeSelectedAccountName(String accountName) {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        Resources resources = this.getResources();
+        Resources resources = getResources();
 
-        String accountName = data.getStringExtra(AccountManager.KEY_ACCOUNT_NAME);
-        String accountType = data.getStringExtra(AccountManager.KEY_ACCOUNT_TYPE);
-
-        storeAccountInPrefs(new Account(accountName, accountType), prefs, resources);
-    }
-
-    private void storeAccountInPrefs(Account account, SharedPreferences prefs, Resources resources) {
         Editor editor = prefs.edit();
 
-        editor.putString(resources.getString(R.string.pref_account_name), account.name);
-        editor.putString(resources.getString(R.string.pref_account_type), account.type);
+        editor.putString(resources.getString(R.string.pref_selected_account_name), accountName);
 
         editor.commit();
     }

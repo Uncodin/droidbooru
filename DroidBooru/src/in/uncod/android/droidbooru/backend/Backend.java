@@ -1,7 +1,7 @@
 package in.uncod.android.droidbooru.backend;
 
 import in.uncod.android.droidbooru.BooruFile;
-import in.uncod.android.droidbooru.R;
+import in.uncod.android.droidbooru.auth.Authenticator;
 import in.uncod.android.droidbooru.net.BooruUploadTask;
 import in.uncod.android.droidbooru.net.FilesDownloadedCallback;
 import in.uncod.android.droidbooru.net.FilesUploadedCallback;
@@ -22,22 +22,23 @@ import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 import org.apache.http.HttpHost;
 
+import android.accounts.Account;
+import android.accounts.AccountManager;
 import android.content.ContentResolver;
 import android.content.Context;
-import android.content.SharedPreferences;
-import android.content.res.Resources;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
-import android.preference.PreferenceManager;
 import android.util.Log;
 
 public abstract class Backend {
@@ -46,7 +47,7 @@ public abstract class Backend {
     }
 
     protected static String TAG = "Backend";
-    private static Backend mInstance;
+    private static Map<Account, Backend> mInstances = new HashMap<Account, Backend>();
     protected File mDataDirectory;
     protected File mCacheDirectory;
     protected URI mServerAddress;
@@ -56,55 +57,25 @@ public abstract class Backend {
     protected URI mServerThumbRequestUrl;
     protected IConnectivityStatus mConnectionChecker;
 
-    public static Backend init(Context ctx) {
+    public static Backend init(Context ctx, Account acct) {
+        String serverAddress = AccountManager.get(ctx).getUserData(acct,
+                Authenticator.ACCOUNT_KEY_SERVER_ADDRESS);
+
         // Determine which Backend we need
         if (Build.DEVICE.contains("limo")) {
-            mInstance = new MODLiveBackend(ctx, getDataDirectory(ctx), getCacheDirectory(ctx),
-                    getServerAddress(ctx), new ConnectivityAgent(ctx));
+            mInstances.put(acct, new MODLiveBackend(ctx, getDataDirectory(ctx), getCacheDirectory(ctx),
+                    serverAddress, new ConnectivityAgent(ctx)));
         }
         else if (ctx.getPackageManager().hasSystemFeature("com.google.android.tv")) {
-            mInstance = new SimpleHTTPBackend(getDataDirectory(ctx), getCacheDirectory(ctx),
-                    getServerAddress(ctx), new ConnectivityAgent(ctx));
+            mInstances.put(acct, new SimpleHTTPBackend(getDataDirectory(ctx), getCacheDirectory(ctx),
+                    serverAddress, new ConnectivityAgent(ctx)));
         }
         else {
-            mInstance = new NativBackend(getDataDirectory(ctx), getCacheDirectory(ctx),
-                    getServerAddress(ctx), new ConnectivityAgent(ctx));
+            mInstances.put(acct, new NativBackend(getDataDirectory(ctx), getCacheDirectory(ctx),
+                    serverAddress, new ConnectivityAgent(ctx)));
         }
 
-        return mInstance;
-    }
-
-    public static String getServerName(Context ctx) {
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(ctx);
-        Resources resources = ctx.getResources();
-
-        // Determine selected server address & name
-        String[] serverNames = resources.getStringArray(R.array.server_list);
-        String[] serverAddresses = resources.getStringArray(R.array.server_list_values);
-
-        String selectedServerAddress = prefs.getString(resources.getString(R.string.pref_selected_server),
-                resources.getString(R.string.dv_pref_selected_server));
-
-        int i = 0;
-        for (String name : serverNames) {
-            if (serverAddresses[i].equals(selectedServerAddress)) {
-                return name;
-            }
-
-            i++;
-        }
-
-        return "";
-    }
-
-    private static String getServerAddress(Context ctx) {
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(ctx);
-        Resources resources = ctx.getResources();
-
-        String selectedServerAddress = prefs.getString(resources.getString(R.string.pref_selected_server),
-                resources.getString(R.string.dv_pref_selected_server));
-
-        return selectedServerAddress;
+        return mInstances.get(acct);
     }
 
     private static File getCacheDirectory(Context ctx) {
@@ -115,11 +86,11 @@ public abstract class Backend {
         return ctx.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
     }
 
-    public static Backend getInstance(Context ctx) {
-        if (mInstance == null)
-            mInstance = init(ctx);
+    public static Backend getInstance(Context ctx, Account acct) {
+        if (!mInstances.containsKey(acct))
+            return init(ctx, acct);
 
-        return mInstance;
+        return mInstances.get(acct);
     }
 
     Backend(File dataDirectory, File cacheDirectory, String serverAddress,

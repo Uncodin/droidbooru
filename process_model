@@ -3,9 +3,18 @@
 MODEL=./nodebooru/obooru.model
 OUTPUT_DIR=./DroidBooru/libs/
 
+# Make sure submodules have been initialized
+git submodule update --init && \
+cd nodebooru && git submodule update --init && cd ../ \
+
+# Create the build directories if necessary
 mkdir -p ./build && \
 mkdir -p $OUTPUT_DIR && \
+
+# Preprocess the model file and invoke Nativ
 cpp -P $MODEL ./build/out.model && \
-python nativ generate jni ./build/out.model && \
+python nodebooru/nativ generate jni ./build/out.model && \
+
+# Copy the generated libs to the output directory
 cp ./build/jni/out.model/nativ.jar $OUTPUT_DIR && \
 cp -r ./build/jni/out.model/libs/* $OUTPUT_DIR
